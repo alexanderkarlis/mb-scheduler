@@ -1,5 +1,6 @@
 <script lang="typescript">
-    import { activeWeekDay } from "./store";
+    import { activeWeekday, activeWeekdayTimes } from "./store";
+    import Popover from "svelte-popover";
 
     let daysOfWeek = [
         "Sunday",
@@ -36,6 +37,10 @@
 </script>
 
 <style>
+    .group {
+        display: flex;
+        flex-wrap: wrap;
+    }
     #day {
         border: "1px solid black";
         color: darkgreen;
@@ -47,24 +52,73 @@
         flex-direction: row;
         justify-content: space-evenly;
     }
+    #clear-day-btn {
+        height: 30px;
+        background-color: "#efefef";
+    }
+    .content {
+        width: 150px;
+        padding: 10px;
+        background: #fff;
+    }
+    .freq-btn {
+        background-color: rgb(226, 160, 224);
+    }
 </style>
 
 <main>
-    <button
-        on:click={() => {
-            $activeWeekDay = '';
-        }}>clear</button>
     <div id="weekdayContainer">
+        <button
+            id="clear-day-btn"
+            on:click={() => {
+                $activeWeekday = '';
+            }}>clear
+        </button>
         {#each daysOfWeek as day}
             <div>
                 <button
                     on:click={() => {
                         console.log(classTimes[day]);
-                        $activeWeekDay = day;
+                        $activeWeekdayTimes = classTimes[day];
+                        $activeWeekday = day;
                     }}
                     id="day">{day}
                 </button>
-                {#if $activeWeekDay === day}<span value={day}>times</span>{/if}
+                {#if $activeWeekday === day}
+                    {#each classTimes[day] as time}
+                        <div class="group">
+                            <Popover position="right-end" arrowColor="#fff">
+                                <button slot="target">{time}</button>
+                                <div slot="content" class="content">
+                                    <button
+                                        on:click={() => {
+                                            console.log({ day, frequency: 1 });
+                                        }}
+                                        class="freq-btn">
+                                        Single
+                                    </button>
+                                    <button
+                                        on:click={() => {
+                                            console.log({ day, frequency: 10 });
+                                        }}
+                                        class="freq-btn">
+                                        10 Weeks
+                                    </button>
+                                    <button
+                                        on:click={() => {
+                                            console.log({
+                                                day,
+                                                frequency: 999,
+                                            });
+                                        }}
+                                        class="freq-btn">
+                                        Forever
+                                    </button>
+                                </div>
+                            </Popover>
+                        </div>
+                    {/each}
+                {/if}
             </div>
         {/each}
     </div>

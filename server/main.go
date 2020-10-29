@@ -32,8 +32,8 @@ const (
 	// UIPort for the running UI.
 	UIPort                 = ":8888"
 	seleniumPath           = "adds/selenium-server-standalone-3.141.59.jar"
-	geckoDriverPath        = "adds/geckodriver"
-	geckoDriverPathWindows = "adds/geckodriver_windows.exe"
+	geckoDriverPath        = "../adds/geckodriver"
+	geckoDriverPathWindows = "../adds/geckodriver_windows.exe"
 	baseURL                = "https://mindbody.io/"
 	actualURL              = "https://mindbody.io/locations/elite-core-fitness"
 
