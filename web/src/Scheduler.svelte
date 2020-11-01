@@ -1,5 +1,5 @@
 <script lang="typescript">
-    import { activeWeekday, activeWeekdayTimes } from "./store";
+    import { activeWeekday, activeWeekdayTimes, Frequency } from "./store";
     import Popover from "svelte-popover";
 
     let daysOfWeek = [
@@ -24,7 +24,8 @@
     let saturdayTimes: Array<string> = ["9:00am", "10:00am"];
     let sundayTimes: Array<string> = ["9:45am"];
 
-    let classTimes = {
+    type GenericObject = { [key: string]: string[] };
+    let classTimes: GenericObject = {
         Sunday: sundayTimes,
         Monday: weekdayTimes,
         Tuesday: weekdayTimes,
@@ -33,7 +34,6 @@
         Friday: weekdayTimes,
         Saturday: saturdayTimes,
     };
-    let showClassTimes = null;
 </script>
 
 <style>
@@ -78,7 +78,6 @@
             <div>
                 <button
                     on:click={() => {
-                        console.log(classTimes[day]);
                         $activeWeekdayTimes = classTimes[day];
                         $activeWeekday = day;
                     }}
@@ -87,29 +86,35 @@
                 {#if $activeWeekday === day}
                     {#each classTimes[day] as time}
                         <div class="group">
-                            <Popover position="right-end" arrowColor="#fff">
+                            <Popover arrowColor="#fff">
                                 <button slot="target">{time}</button>
                                 <div slot="content" class="content">
                                     <button
                                         on:click={() => {
-                                            console.log({ day, frequency: 1 });
+                                            $Frequency.day = day;
+                                            $Frequency.freq = 1;
+                                            $Frequency.time = time;
+                                            console.log($Frequency);
                                         }}
                                         class="freq-btn">
                                         Single
                                     </button>
                                     <button
                                         on:click={() => {
-                                            console.log({ day, frequency: 10 });
+                                            $Frequency.day = day;
+                                            $Frequency.freq = 10;
+                                            $Frequency.time = time;
+                                            console.log($Frequency);
                                         }}
                                         class="freq-btn">
                                         10 Weeks
                                     </button>
                                     <button
                                         on:click={() => {
-                                            console.log({
-                                                day,
-                                                frequency: 999,
-                                            });
+                                            $Frequency.day = day;
+                                            $Frequency.freq = 999;
+                                            $Frequency.time = time;
+                                            console.log($Frequency);
                                         }}
                                         class="freq-btn">
                                         Forever

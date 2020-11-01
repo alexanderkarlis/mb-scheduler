@@ -1,7 +1,11 @@
+<script>
+    import { Frequency } from "./store";
+</script>
+
 <style>
     #container {
         margin-left: 40px;
     }
 </style>
 
-<div id="container">this will be the data one day</div>
+<span id="container">{JSON.stringify($Frequency)}</span>
