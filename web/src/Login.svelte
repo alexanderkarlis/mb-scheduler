@@ -22,6 +22,8 @@
                 serverStatus = data;
                 console.log(data);
                 return data;
+            }).catch(e => {
+                serverStatus = "NOT ok"
             });
     });
 </script>

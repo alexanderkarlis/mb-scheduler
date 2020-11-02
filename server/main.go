@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"time"
@@ -13,13 +12,6 @@ import (
 )
 
 var (
-	// frequency = flag.String("frequency", "every", "options: [every, once]")
-	// date      = flag.String("date", "mm-dd-yyyy", "this is the specific date to book class.")
-	// classTime = flag.String("time", "5:45pm", "this is the specific class time in which to book.")
-	// fullName  = flag.String("fullname", "", "the full name of the user; used as a login check.")
-	// userName  = flag.String("username", "", "the username (email) of mindbody account")
-	// password  = flag.String("password", "", "the password of the mindbody account")
-
 	// selenium opts
 	opts = []selenium.ServiceOption{
 		selenium.Output(os.Stderr),
@@ -31,7 +23,7 @@ const (
 	SeleniumPort = 4444
 	// UIPort for the running UI.
 	UIPort                 = ":8888"
-	seleniumPath           = "adds/selenium-server-standalone-3.141.59.jar"
+	seleniumPath           = "../adds/selenium-server-standalone-3.141.59.jar"
 	geckoDriverPath        = "../adds/geckodriver"
 	geckoDriverPathWindows = "../adds/geckodriver_windows.exe"
 	baseURL                = "https://mindbody.io/"
@@ -71,14 +63,16 @@ type ServerStatus struct {
 
 // User type for mindbody initialization
 type User struct {
-	FullName string `json:"name"`
-	UserName string `json:"username"`
-	Password string `json:"password"`
-	// Schedule schedule
+	FullName string   `json:"name"`
+	UserName string   `json:"username"`
+	Password string   `json:"password"`
+	Schedule Schedule `json:"schedule"`
 }
 
-type schedule struct {
-	dayOfWeek, classTime, frequency string
+type Schedule struct {
+	ClassTime string `json:"classtime"`
+	Date      string `json:"date"`
+	Frequency string `json:"frequency"`
 }
 
 func enableCors(w *http.ResponseWriter) {
@@ -100,27 +94,42 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	case "POST":
 		var u User
 		err := json.NewDecoder(r.Body).Decode(&u)
+		defer r.Body.Close()
 		fmt.Printf("%+v\n", r.Body)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			panic("bad request")
 		}
+		_, weekday, err := parseDate(u.Schedule.Date)
+		SignUp(weekday, u.Schedule.ClassTime, u.FullName, u.UserName, u.Password)
 		err = json.NewEncoder(w).Encode(&u)
 	}
 }
 
 func main() {
-	http.HandleFunc("/", handler)
-	log.Fatal(http.ListenAndServe(UIPort, nil))
-
-	// day, weekday, err := parseDate(*date)
-	// checkError(err)
-	// fmt.Println(day, weekday)
-	// SignUp(weekday, *date, *classTime, *fullName, *userName, *password)
+	// http.HandleFunc("/", handler)
+	// log.Fatal(http.ListenAndServe(UIPort, nil))
+	_, weekday, err := parseDate("11/02/2020")
+	if err != nil {
+		panic("panicked")
+	}
+	u := User{FullName: "Alexander Karlis", Password: "921921Zz?", UserName: "alexanderkarlis@gmail.com", Schedule: Schedule{ClassTime: "5:45pm", Date: "", Frequency: "1"}}
+	// username: "alexanderkarlis@gmail.com",
+	//         name: "Alexander Karlis",
+	//         password: "921921Zz?",
+	//         schedule: {
+	//             classtime: "5:45pm",
+	//             date: "11/02/2020",
+	//             frequency: "1",
+	//         },
+	SignUp(weekday, u.Schedule.ClassTime, u.FullName, u.UserName, u.Password)
 }
 
 // SignUp signs up the user for a specified class time.
-func SignUp(weekday, date, classTime, fullName, userName, password string) bool {
+// ** @params weekday, date, classTime, fullName, userName, password string
+func SignUp(weekday, classTime, fullName, userName, password string) bool {
+	currentWorkingDirectory, err := os.Getwd()
+	fmt.Println(currentWorkingDirectory)
 	selenium.SetDebug(true)
 
 	service, err := selenium.NewSeleniumService(seleniumPath, SeleniumPort, opts...)
@@ -131,8 +140,10 @@ func SignUp(weekday, date, classTime, fullName, userName, password string) bool 
 	defer service.Stop()
 
 	caps := selenium.Capabilities{"browserName": "firefox", "headless": false}
+	fmt.Println("TRYING TO START SELENIUM SERVER")
 	driver, err := selenium.NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", SeleniumPort))
 	driver.ResizeWindow("", 1264, 1228)
+	fmt.Println("AFTER \n")
 	if err != nil {
 		panic(err)
 	}
