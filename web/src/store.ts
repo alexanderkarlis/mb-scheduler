@@ -9,15 +9,15 @@ export const user = writable({
 export const activeWeekday = writable("");
 export const activeWeekdayTimes = writable([""]);
 
-interface Frequency {
+interface IFrequency {
     day: string;
     time: string;
     freq: number;
 }
 
-export const Frequency: Writable<Frequency> = writable({
+export const Frequency: Writable<IFrequency> = writable({
     day: null,
     time: null,
     freq: null,
 })
-export const FrequencyArray: Writable<Array<Frequency>> = writable([])
+export const FrequencyArray: Writable<Array<IFrequency>> = writable([])

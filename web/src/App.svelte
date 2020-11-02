@@ -22,6 +22,9 @@
 <main>
     <h1>mindbody scheduler</h1>
     <span>server status: {serverStatus && serverStatus.status}</span>
+    <br />
+    <br />
+
     <div id="opts">
         <div>
             <Login bind:serverStatus />

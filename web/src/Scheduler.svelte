@@ -1,5 +1,10 @@
 <script lang="typescript">
-    import { activeWeekday, activeWeekdayTimes, Frequency } from "./store";
+    import {
+        activeWeekday,
+        activeWeekdayTimes,
+        Frequency,
+        FrequencyArray,
+    } from "./store";
     import Popover from "svelte-popover";
 
     let daysOfWeek = [
@@ -33,6 +38,18 @@
         Thursday: weekdayTimes,
         Friday: weekdayTimes,
         Saturday: saturdayTimes,
+    };
+    const handleBtn = (e, day, time) => {
+        console.log(e.target.value);
+        $Frequency.day = day;
+        $Frequency.freq = e.target.value;
+        $Frequency.time = time;
+        console.log($Frequency);
+        $FrequencyArray = [
+            ...$FrequencyArray,
+            { day: day, freq: e.target.value, time: time },
+        ];
+        console.log([...$FrequencyArray]);
     };
 </script>
 
@@ -90,31 +107,25 @@
                                 <button slot="target">{time}</button>
                                 <div slot="content" class="content">
                                     <button
-                                        on:click={() => {
-                                            $Frequency.day = day;
-                                            $Frequency.freq = 1;
-                                            $Frequency.time = time;
-                                            console.log($Frequency);
+                                        value={1}
+                                        on:click={(e) => {
+                                            handleBtn(e, day, time);
                                         }}
                                         class="freq-btn">
                                         Single
                                     </button>
                                     <button
-                                        on:click={() => {
-                                            $Frequency.day = day;
-                                            $Frequency.freq = 10;
-                                            $Frequency.time = time;
-                                            console.log($Frequency);
+                                        value={10}
+                                        on:click={(e) => {
+                                            handleBtn(e, day, time);
                                         }}
                                         class="freq-btn">
                                         10 Weeks
                                     </button>
                                     <button
-                                        on:click={() => {
-                                            $Frequency.day = day;
-                                            $Frequency.freq = 999;
-                                            $Frequency.time = time;
-                                            console.log($Frequency);
+                                        value={999}
+                                        on:click={(e) => {
+                                            handleBtn(e, day, time);
                                         }}
                                         class="freq-btn">
                                         Forever
