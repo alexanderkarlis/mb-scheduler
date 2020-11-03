@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -21,11 +22,11 @@ var (
 const (
 	// SeleniumPort is the listening port for running the proxy
 	SeleniumPort = 4444
-	// UIPort for the running UI.
-	UIPort                 = ":8888"
-	seleniumPath           = "../adds/selenium-server-standalone-3.141.59.jar"
-	geckoDriverPath        = "../adds/geckodriver"
-	geckoDriverPathWindows = "../adds/geckodriver_windows.exe"
+	// serverPort for the running UI.
+	serverPort             = ":8888"
+	seleniumPath           = "./adds/selenium-server-standalone-3.141.59.jar"
+	geckoDriverPath        = "./adds/geckodriver"
+	geckoDriverPathWindows = "./adds/geckodriver_windows.exe"
 	baseURL                = "https://mindbody.io/"
 	actualURL              = "https://mindbody.io/locations/elite-core-fitness"
 
@@ -69,6 +70,7 @@ type User struct {
 	Schedule Schedule `json:"schedule"`
 }
 
+// Schedule type for mindbody initialization
 type Schedule struct {
 	ClassTime string `json:"classtime"`
 	Date      string `json:"date"`
@@ -95,7 +97,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		var u User
 		err := json.NewDecoder(r.Body).Decode(&u)
 		defer r.Body.Close()
-		fmt.Printf("%+v\n", r.Body)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			panic("bad request")
@@ -106,23 +107,31 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func main() {
-	// http.HandleFunc("/", handler)
-	// log.Fatal(http.ListenAndServe(UIPort, nil))
-	_, weekday, err := parseDate("11/02/2020")
-	if err != nil {
-		panic("panicked")
+func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println(r.URL.RawQuery)
+	switch r.Method {
+	case "GET":
+		fmt.Printf("health check \n")
+		b := []byte("{\"status\": \"ok2\"}")
+		err := json.NewEncoder(w).Encode(b)
+		if err != nil {
+			panic("error!")
+		}
 	}
-	u := User{FullName: "Alexander Karlis", Password: "921921Zz?", UserName: "alexanderkarlis@gmail.com", Schedule: Schedule{ClassTime: "5:45pm", Date: "", Frequency: "1"}}
-	// username: "alexanderkarlis@gmail.com",
-	//         name: "Alexander Karlis",
-	//         password: "921921Zz?",
-	//         schedule: {
-	//             classtime: "5:45pm",
-	//             date: "11/02/2020",
-	//             frequency: "1",
-	//         },
-	SignUp(weekday, u.Schedule.ClassTime, u.FullName, u.UserName, u.Password)
+}
+
+func main() {
+	fmt.Println("Starting services...")
+	fmt.Printf("Using port -> %+s", serverPort)
+	http.HandleFunc("/", handler)
+	http.HandleFunc("/check", healthCheckHandler)
+	log.Fatal(http.ListenAndServe(serverPort, nil))
+	// _, weekday, err := parseDate("11/02/2020")
+	// if err != nil {
+	// 	panic("panicked")
+	// }
+	// u := User{FullName: "Alexander Karlis", Password: "921921Zz?", UserName: "alexanderkarlis@gmail.com", Schedule: Schedule{ClassTime: "5:45pm", Date: "", Frequency: "1"}}
+	// SignUp(weekday, u.Schedule.ClassTime, u.FullName, u.UserName, u.Password)
 }
 
 // SignUp signs up the user for a specified class time.
@@ -143,7 +152,7 @@ func SignUp(weekday, classTime, fullName, userName, password string) bool {
 	fmt.Println("TRYING TO START SELENIUM SERVER")
 	driver, err := selenium.NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", SeleniumPort))
 	driver.ResizeWindow("", 1264, 1228)
-	fmt.Println("AFTER \n")
+
 	if err != nil {
 		panic(err)
 	}

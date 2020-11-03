@@ -5,7 +5,7 @@
 
     async function onSubmit() {
         console.log(JSON.stringify($user));
-        let r = await fetch("http://localhost:8888", {
+        let r = await fetch("http://0.0.0.0:8888", {
             method: "post",
             body: JSON.stringify($user),
         });
@@ -16,14 +16,15 @@
 
     onMount(async () => {
         console.log("login mounted");
-        await fetch(`http://localhost:8888`)
+        await fetch(`http://0.0.0.0:8888/`)
             .then((r) => r.json())
+            .catch((e) => {
+                serverStatus = "NOT ok";
+            })
             .then((data) => {
                 serverStatus = data;
                 console.log(data);
                 return data;
-            }).catch(e => {
-                serverStatus = "NOT ok"
             });
     });
 </script>
@@ -47,5 +48,3 @@
     Password:
     <input type="password" id="pword" bind:value={$user.password} />
 </form>
-<button on:click={onSubmit}>Submit</button>
-<p>{JSON.stringify($user)}</p>

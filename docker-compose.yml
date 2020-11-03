@@ -1,0 +1,21 @@
+version: "3.3"
+services:
+    mongo:
+        image: "mongo:latest"
+        container_name: "mongo"
+        environment:
+            - MONGO_INITDB_DATABASE=scheduler-app-db
+            - MONGO_INITDB_ROOT_USERNAME=root
+            - MONGO_INITDB_ROOT_PASSWORD=thisisasecret
+        ports:
+            - "27100:27017"
+    server:
+        container_name: "server"
+        build: server
+        ports:
+            - "8888:8888"
+    web:
+        container_name: "web"
+        build: web
+        ports:
+            - "5001:80"

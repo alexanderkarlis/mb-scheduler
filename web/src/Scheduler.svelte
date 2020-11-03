@@ -64,10 +64,10 @@
         cursor: pointer;
     }
     #weekdayContainer {
-        width: 1000px;
+        width: 800px;
         display: flex;
         flex-direction: row;
-        justify-content: space-evenly;
+        justify-content: space-between;
     }
     #clear-day-btn {
         height: 30px;

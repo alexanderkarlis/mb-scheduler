@@ -17,19 +17,24 @@
         display: flex;
         flex-direction: row;
     }
+    #app-container {
+        margin: 50px;
+    }
 </style>
 
 <main>
-    <h1>mindbody scheduler</h1>
-    <span>server status: {serverStatus && serverStatus.status}</span>
-    <br />
-    <br />
+    <div id="app-container">
+        <h1>mindbody scheduler</h1>
+        <span>server status: {serverStatus && serverStatus.status}</span>
+        <br />
+        <br />
 
-    <div id="opts">
-        <div>
-            <Login bind:serverStatus />
-            <Scheduler />
+        <div id="opts">
+            <div>
+                <Login bind:serverStatus />
+                <Scheduler />
+            </div>
+            <Data />
         </div>
-        <Data />
     </div>
 </main>

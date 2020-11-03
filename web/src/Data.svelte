@@ -1,5 +1,5 @@
 <script>
-    import { Frequency, FrequencyArray } from "./store";
+    import { user, FrequencyArray } from "./store";
 
     console.log($FrequencyArray);
     const scheduleClass = async () => {
@@ -28,25 +28,51 @@
         display: flex;
         flex-direction: column;
     }
-    #data-tbl {
-        padding: 10px;
-    }
     #tbl-header-col {
         text-transform: capitalize;
+    }
+    #data-tbl {
+        font-family: Arial, Helvetica, sans-serif;
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+    #data-tbl td,
+    #data-tbl th {
+        border: 1px solid #ddd;
+        padding: 8px;
+    }
+
+    #data-tbl tr:nth-child(even) {
+        background-color: #f2f2f2;
+    }
+
+    #data-tbl tr:hover {
+        background-color: #ddd;
+    }
+
+    #data-tbl th {
+        padding-top: 12px;
+        padding-bottom: 12px;
+        text-align: left;
+        background-color: #4caf50;
+        color: white;
     }
 </style>
 
 <div id="container">
     <table id="data-tbl">
         <tr>
-            <th id="tbl-header-col" scope="col">date</th>
+            <th id="tbl-header-col" scope="col" />
+            <th id="tbl-header-col" scope="col">username</th>
             <th id="tbl-header-col" scope="col">day of week</th>
             <th id="tbl-header-col" scope="col">time</th>
             <th id="tbl-header-col" scope="col">freq</th>
         </tr>
-        {#each $FrequencyArray as freq}
+        {#each $FrequencyArray as freq, i}
             <tr>
-                <td>1/1/2020</td>
+                <td>{i}</td>
+                <td>{$user.username}</td>
                 <td>{freq.day}</td>
                 <td>{freq.time}</td>
                 <td>{freq.freq}</td>
