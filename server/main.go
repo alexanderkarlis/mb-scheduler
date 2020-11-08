@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
+
+	"strconv"
 	"time"
 
 	"github.com/tebeka/selenium"
@@ -49,13 +50,25 @@ const (
 	orderConfimationXpath    = "//p[contains(text(), 'Order Confirmed')]"
 )
 
-// Frequency of signups
-type Frequency int
-
 const (
 	every Frequency = iota
 	single
 )
+
+type Days []string
+
+var days = map[string]int{
+	"Monday":    0,
+	"Tuesday":   1,
+	"Wednesday": 2,
+	"Thursday":  3,
+	"Friday":    4,
+	"Saturday":  5,
+	"Sunday":    6,
+}
+
+// Frequency of signups
+type Frequency int
 
 // ServerStatus sends an ok to svelte ui on mount
 type ServerStatus struct {
@@ -73,8 +86,120 @@ type User struct {
 // Schedule type for mindbody initialization
 type Schedule struct {
 	ClassTime string `json:"classtime"`
+	DayOfWeek string `json:"weekday"`
 	Date      string `json:"date"`
 	Frequency string `json:"frequency"`
+}
+
+// ScheduleDatum is the data to be prepared and inserted into
+// mongodb
+type ScheduleDatum struct {
+	// TimeToExecute is in epoch time ms of the class
+	// `datetime - 1 day + 10min`
+	TimeToExecute int64 `json:"time"`
+	User          User  `json:"user"`
+}
+
+// ScheduleData - Slice of ScheduleDatum
+type ScheduleData []ScheduleDatum
+
+func main() {
+	// p := fmt.Println
+	// fmt.Println("Starting services...")
+	// fmt.Printf("Using port -> %+s\n", serverPort)
+
+	s := Schedule{ClassTime: "5:45pm", Date: "", DayOfWeek: "Saturday", Frequency: "10"}
+	u := User{FullName: "Alexander Karlis", UserName: "alexanderkarlis@gmail.com", Password: "password", Schedule: s}
+	u.calculateSignUpTimes()
+	// http.HandleFunc("/", newSignupHandler)
+	// go func() {
+	// 	log.Fatal(http.ListenAndServe(serverPort, nil))
+	// }()
+
+	// _, weekday, err := parseDate("11/02/2020")
+	// if err != nil {
+	// 	panic("panicked")
+	// }
+	// u := User{FullName: "Alexander Karlis", Password: "921921Zz?", UserName: "alexanderkarlis@gmail.com", Schedule: Schedule{ClassTime: "5:45pm", Date: "", Frequency: "1"}}
+	// SignUp(weekday, u.Schedule.ClassTime, u.FullName, u.UserName, u.Password)
+}
+
+// returns the number of days until the next weeekday, int
+func (d *ScheduleData) pp() {
+	b, err := json.MarshalIndent(d, "", "    ")
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	fmt.Print(string(b))
+}
+
+func (u *User) calculateSignUpTimes() *ScheduleDatum {
+	p := fmt.Println
+	reqTime := days[u.Schedule.DayOfWeek]
+	todayTime := days[time.Now().Weekday().String()]
+	fmt.Println(u.Schedule.Date)
+	// how many days from today
+	var daysPastFromToday int
+	var parsedClassTime time.Time
+	parsedClassTime, err := time.Parse("03:04pm", fmt.Sprintf("%07s", u.Schedule.ClassTime))
+	if reqTime == todayTime {
+		p("today -> ", time.Now().Weekday())
+		fmt.Printf("todayDate: %d\n", todayTime)
+		fmt.Printf("reqDate: %d\n", reqTime)
+		p(u.Schedule.ClassTime)
+
+		// pad time slot with a leading 0 if the time
+		// cannot be parsed by time package
+
+		if err != nil {
+			panic("error parsing date")
+		}
+
+		// has the classTime (on the same day) already happened??
+		nh, nm, ns := time.Now().Local().Clock()
+		ph, pm, ps := parsedClassTime.Hour(), parsedClassTime.Minute(), parsedClassTime.Second()
+
+		if nh*3600+nm*60+ns < ph*3600+pm*60+ps {
+			daysPastFromToday = 0
+			p("class has NOT happened yet.")
+		} else {
+			daysPastFromToday = 7
+			p("class has ALREADY happened. starting with next instance of day")
+		}
+
+	} else if reqTime > todayTime {
+		daysPastFromToday = reqTime - todayTime
+	} else {
+		// get to the end of the week, then
+		// count back up to the reqTime.
+		daysPastFromToday = (6 - reqTime - 1) + (todayTime)
+	}
+
+	// fcrt first class calculated run time
+	fcrt := time.Now().AddDate(0, 0, daysPastFromToday)
+	m := fcrt.AddDate(0, 0, -1)
+	fmt.Printf("days from today: %d\n", daysPastFromToday)
+
+	runT := time.Date(
+		m.Year(),
+		m.Month(),
+		m.Day(),
+		parsedClassTime.Hour(),
+		parsedClassTime.Minute()+10,
+		parsedClassTime.Second(),
+		0,
+		parsedClassTime.Location(),
+	)
+	p("runT", runT)
+	var d ScheduleData
+	freq, err := strconv.Atoi(u.Schedule.Frequency)
+	for i := 0; i < freq; i++ {
+		p(runT.AddDate(0, 0, 7*i))
+		d = append(d, ScheduleDatum{TimeToExecute: runT.AddDate(0, 0, 7*i).Unix(), User: *u})
+	}
+	d.pp()
+	// fmt.Printf("%+v", d)
+	return &ScheduleDatum{TimeToExecute: runT.Unix(), User: *u}
 }
 
 func enableCors(w *http.ResponseWriter) {
@@ -84,7 +209,7 @@ func enableCors(w *http.ResponseWriter) {
 	(*w).Header().Set("Content-Type", "application/json")
 }
 
-func handler(w http.ResponseWriter, r *http.Request) {
+func newSignupHandler(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	switch r.Method {
 	case "GET":
@@ -101,37 +226,10 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			panic("bad request")
 		}
-		_, weekday, err := parseDate(u.Schedule.Date)
+		_, weekday, err := parseDate(u.Schedule.Date, u.Schedule.DayOfWeek)
 		SignUp(weekday, u.Schedule.ClassTime, u.FullName, u.UserName, u.Password)
 		err = json.NewEncoder(w).Encode(&u)
 	}
-}
-
-func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(r.URL.RawQuery)
-	switch r.Method {
-	case "GET":
-		fmt.Printf("health check \n")
-		b := []byte("{\"status\": \"ok2\"}")
-		err := json.NewEncoder(w).Encode(b)
-		if err != nil {
-			panic("error!")
-		}
-	}
-}
-
-func main() {
-	fmt.Println("Starting services...")
-	fmt.Printf("Using port -> %+s", serverPort)
-	http.HandleFunc("/", handler)
-	http.HandleFunc("/check", healthCheckHandler)
-	log.Fatal(http.ListenAndServe(serverPort, nil))
-	// _, weekday, err := parseDate("11/02/2020")
-	// if err != nil {
-	// 	panic("panicked")
-	// }
-	// u := User{FullName: "Alexander Karlis", Password: "921921Zz?", UserName: "alexanderkarlis@gmail.com", Schedule: Schedule{ClassTime: "5:45pm", Date: "", Frequency: "1"}}
-	// SignUp(weekday, u.Schedule.ClassTime, u.FullName, u.UserName, u.Password)
 }
 
 // SignUp signs up the user for a specified class time.
@@ -256,11 +354,10 @@ func SignUp(weekday, classTime, fullName, userName, password string) bool {
 	return true
 }
 
-func parseDate(dt string) (string, string, error) {
+func parseDate(dt, weekday string) (string, string, error) {
 	parsedTime, err := time.Parse("01/02/2006", dt)
 	checkError(err)
 	day := fmt.Sprintf("%d", parsedTime.Day())
-	weekday := fmt.Sprintf("%s", parsedTime.Weekday())
 	return day, shortDOW(weekday), err
 }
 

@@ -3,17 +3,6 @@
     import { user } from "./store";
     import { onMount } from "svelte";
 
-    async function onSubmit() {
-        console.log(JSON.stringify($user));
-        let r = await fetch("http://0.0.0.0:8888", {
-            method: "post",
-            body: JSON.stringify($user),
-        });
-        r.text().then((data) => {
-            console.log(JSON.parse(data));
-        });
-    }
-
     onMount(async () => {
         console.log("login mounted");
         await fetch(`http://0.0.0.0:8888/`)
