@@ -55,6 +55,7 @@ const (
 	single
 )
 
+// Days - slice of day
 type Days []string
 
 var days = map[string]int{
@@ -130,14 +131,14 @@ func (d *ScheduleData) pp() {
 	if err != nil {
 		fmt.Println("error:", err)
 	}
-	fmt.Print(string(b))
+	fmt.Println(string(b))
 }
 
 func (u *User) calculateSignUpTimes() *ScheduleDatum {
 	p := fmt.Println
 	reqTime := days[u.Schedule.DayOfWeek]
 	todayTime := days[time.Now().Weekday().String()]
-	fmt.Println(u.Schedule.Date)
+
 	// how many days from today
 	var daysPastFromToday int
 	var parsedClassTime time.Time
@@ -148,9 +149,6 @@ func (u *User) calculateSignUpTimes() *ScheduleDatum {
 		fmt.Printf("reqDate: %d\n", reqTime)
 		p(u.Schedule.ClassTime)
 
-		// pad time slot with a leading 0 if the time
-		// cannot be parsed by time package
-
 		if err != nil {
 			panic("error parsing date")
 		}
@@ -159,6 +157,7 @@ func (u *User) calculateSignUpTimes() *ScheduleDatum {
 		nh, nm, ns := time.Now().Local().Clock()
 		ph, pm, ps := parsedClassTime.Hour(), parsedClassTime.Minute(), parsedClassTime.Second()
 
+		// check and see if classtime has already passed for today
 		if nh*3600+nm*60+ns < ph*3600+pm*60+ps {
 			daysPastFromToday = 0
 			p("class has NOT happened yet.")
@@ -190,15 +189,17 @@ func (u *User) calculateSignUpTimes() *ScheduleDatum {
 		0,
 		parsedClassTime.Location(),
 	)
-	p("runT", runT)
+
 	var d ScheduleData
 	freq, err := strconv.Atoi(u.Schedule.Frequency)
 	for i := 0; i < freq; i++ {
-		p(runT.AddDate(0, 0, 7*i))
-		d = append(d, ScheduleDatum{TimeToExecute: runT.AddDate(0, 0, 7*i).Unix(), User: *u})
+		runDate := runT.AddDate(0, 0, 7*i)
+		u.Schedule.Date = runDate.Format("01/02/2006")
+		d = append(d, ScheduleDatum{TimeToExecute: runDate.Unix(), User: *u})
 	}
+
 	d.pp()
-	// fmt.Printf("%+v", d)
+
 	return &ScheduleDatum{TimeToExecute: runT.Unix(), User: *u}
 }
 

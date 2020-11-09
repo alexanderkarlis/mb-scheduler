@@ -9,3 +9,4 @@
 web/node_modules
 web/build
 web/npm-debug.log*
+tmp
