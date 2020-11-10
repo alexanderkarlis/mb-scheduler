@@ -10,13 +10,13 @@ export const activeWeekday = writable("");
 export const activeWeekdayTimes = writable([""]);
 
 interface IFrequency {
-    day: string;
+    weekday: string;
     time: string;
     freq: number;
 }
 
 export const Frequency: Writable<IFrequency> = writable({
-    day: null,
+    weekday: null,
     time: null,
     freq: null,
 })

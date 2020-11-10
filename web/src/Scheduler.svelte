@@ -41,13 +41,13 @@
     };
     const handleBtn = (e, day, time) => {
         console.log(e.target.value);
-        $Frequency.day = day;
+        $Frequency.weekday = day;
         $Frequency.freq = e.target.value;
         $Frequency.time = time;
         console.log($Frequency);
         $FrequencyArray = [
             ...$FrequencyArray,
-            { day: day, freq: e.target.value, time: time },
+            { weekday: day, freq: e.target.value, time: time },
         ];
         console.log([...$FrequencyArray]);
     };

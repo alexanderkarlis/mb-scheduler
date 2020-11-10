@@ -9,8 +9,8 @@
             password: "921921Zz?",
             schedule: {
                 classtime: "5:45pm",
-                date: "11/02/2020",
-                frequency: "1",
+                date: "11/11/2020",
+                frequency: "10",
             },
         };
         let r = await fetch("http://localhost:8888", {
@@ -55,12 +55,17 @@
         padding-top: 12px;
         padding-bottom: 12px;
         text-align: left;
-        background-color: #4caf50;
+        background-color: #eb8531;
         color: white;
+    }
+    .act-btn-box {
+        display: flex;
+        flex-direction: row;
     }
 </style>
 
 <div id="container">
+    <h2>Queue signups</h2>
     <table id="data-tbl">
         <tr>
             <th id="tbl-header-col" scope="col" />
@@ -68,6 +73,29 @@
             <th id="tbl-header-col" scope="col">day of week</th>
             <th id="tbl-header-col" scope="col">time</th>
             <th id="tbl-header-col" scope="col">freq</th>
+            <th id="tbl-header-col" scope="col">action</th>
+        </tr>
+        {#each $FrequencyArray as freq, i}
+            <tr>
+                <td>{i}</td>
+                <td>{$user.username}</td>
+                <td>{freq.weekday}</td>
+                <td>{freq.time}</td>
+                <td>{freq.freq}</td>
+                <td>
+                    <div class="act-btn-box"><button>✅</button> <button>❌</button></div>
+                </td>
+            </tr>
+        {/each}
+    </table>
+    <h2>Scheduled Runs</h2>
+    <table id="data-tbl">
+        <tr>
+            <th id="tbl-header-col" scope="col" />
+            <th id="tbl-header-col" scope="col">schedule time</th>
+            <th id="tbl-header-col" scope="col">day of week</th>
+            <th id="tbl-header-col" scope="col">date</th>
+            <th id="tbl-header-col" scope="col">class time</th>
         </tr>
         {#each $FrequencyArray as freq, i}
             <tr>
@@ -75,7 +103,6 @@
                 <td>{$user.username}</td>
                 <td>{freq.day}</td>
                 <td>{freq.time}</td>
-                <td>{freq.freq}</td>
             </tr>
         {/each}
     </table>

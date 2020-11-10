@@ -5,7 +5,7 @@
 
     onMount(async () => {
         console.log("login mounted");
-        await fetch(`http://0.0.0.0:8888/`)
+        await fetch(`http://0.0.0.0:8888/status`)
             .then((r) => r.json())
             .catch((e) => {
                 serverStatus = "NOT ok";

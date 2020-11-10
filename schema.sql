@@ -1,12 +1,10 @@
 -- schema.sql
 -- Since we might run the import many times we'll drop if exists
-
 DROP DATABASE IF EXISTS mb_scheduler_db;
-
 CREATE DATABASE mb_scheduler_db;
 
 \c mb_scheduler_db
-
+DROP TABLE IF EXISTS schedule_rt;
 CREATE TABLE IF NOT EXISTS schedule_rt (
     id SERIAL PRIMARY KEY,
     runtime INTEGER,
@@ -15,5 +13,6 @@ CREATE TABLE IF NOT EXISTS schedule_rt (
     password VARCHAR,
     classtime VARCHAR,
     weekday VARCHAR,
-    date VARCHAR
+    date VARCHAR,
+    status VARCHAR
 )

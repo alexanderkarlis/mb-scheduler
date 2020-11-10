@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"log"
 	"strings"
 
 	_ "github.com/lib/pq"
@@ -117,56 +118,52 @@ type ScheduleDatum struct {
 	ClassTime     string `json:"classtime"`
 	DayOfWeek     string `json:"weekday"`
 	Date          string `json:"date"`
+	Status        bool   `json:"status"`
 }
 
 // ScheduleData - Slice of ScheduleDatum
 type ScheduleData []ScheduleDatum
 
 func main() {
-	p := fmt.Println
-	// fmt.Println("Starting services...")
-	// fmt.Printf("Using port -> %+s\n", serverPort)
-	var data ScheduleData
-	db, err := sql.Open("postgres", psqlInfo)
-	p(db)
-	if err != nil {
-		panic(err)
-	}
-	u := User{
-		FullName: "Alexander Karlis",
-		UserName: "alexanderkarlis@gmail.com",
-		Password: "password",
-		Schedule: Schedule{
-			ClassTime: "5:45pm",
-			Date:      "",
-			DayOfWeek: "Saturday",
-			Frequency: "10",
-		},
-	}
-	data = *u.calculateSignUpTimes()
-	pstmt, values := data.PrepareQuery()
-	stmt, err := db.Prepare(pstmt)
-	if err != nil {
-		panic(err)
-	}
-	p(stmt)
-	p(values)
-	resp, err := stmt.Exec(values...)
-	p(resp)
-	if err != nil {
-		panic(err)
-	}
-	// http.HandleFunc("/", newSignupHandler)
-	// go func() {
-	// 	log.Fatal(http.ListenAndServe(serverPort, nil))
-	// }()
 
-	// _, weekday, err := parseDate("11/02/2020")
+	fmt.Println("Starting services...")
+	fmt.Printf("Using port -> %+s\n", serverPort)
+	// var data ScheduleData
+	// db, err := sql.Open("postgres", psqlInfo)
+
 	// if err != nil {
-	// 	panic("panicked")
+	// 	panic(err)
 	// }
-	// u := User{FullName: "Alexander Karlis", Password: "921921Zz?", UserName: "alexanderkarlis@gmail.com", Schedule: Schedule{ClassTime: "5:45pm", Date: "", Frequency: "1"}}
-	// SignUp(weekday, u.Schedule.ClassTime, u.FullName, u.UserName, u.Password)
+	// u := User{
+	// 	FullName: "Alexander Karlis",
+	// 	UserName: "alexanderkarlis@gmail.com",
+	// 	Password: "password",
+	// 	Schedule: Schedule{
+	// 		ClassTime: "5:45pm",
+	// 		Date:      "",
+	// 		DayOfWeek: "Saturday",
+	// 		Frequency: "10",
+	// 	},
+	// }
+	// data = *u.calculateSignUpTimes()
+	// pstmt, values := data.PrepareQuery()
+	// stmt, err := db.Prepare(pstmt)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// resp, err := stmt.Exec(values...)
+	// p(resp)
+	// if err != nil {
+	// 	panic(err)
+	// }serverStatusHandler
+	http.HandleFunc("/", newSignupHandler)
+	http.HandleFunc("/status", serverStatusHandler)
+
+	go func() {
+		log.Fatal(http.ListenAndServe(serverPort, nil))
+	}()
+	for {
+	}
 }
 
 // Pretty prints ScheduleData struct.
@@ -239,14 +236,18 @@ func (u *User) calculateSignUpTimes() *ScheduleData {
 	for i := 0; i < freq; i++ {
 		runDate := runT.AddDate(0, 0, 7*i)
 		u.Schedule.Date = runDate.Format("01/02/2006")
-		d = append(d, ScheduleDatum{
-			TimeToExecute: runDate.Unix(),
-			FullName:      u.FullName,
-			UserName:      u.UserName,
-			Password:      u.Password,
-			ClassTime:     u.Schedule.ClassTime,
-			DayOfWeek:     u.Schedule.DayOfWeek,
-			Date:          u.Schedule.Date},
+		d = append(
+			d,
+			ScheduleDatum{
+				TimeToExecute: runDate.Unix(),
+				FullName:      u.FullName,
+				UserName:      u.UserName,
+				Password:      u.Password,
+				ClassTime:     u.Schedule.ClassTime,
+				DayOfWeek:     u.Schedule.DayOfWeek,
+				Date:          u.Schedule.Date,
+				Status:        true,
+			},
 		)
 	}
 
@@ -265,15 +266,14 @@ func replaceSQL(old, searchPattern string) string {
 
 // PrepareQuery function, puts data into Postgres db
 func (d *ScheduleData) PrepareQuery() (string, []interface{}) {
-	insertQuery := "INSERT INTO schedule_rt(runtime, fullname, username, password, classtime, weekday, date) VALUES "
+	insertQuery := "INSERT INTO schedule_rt(runtime, fullname, username, password, classtime, weekday, date, status) VALUES "
 	vals := []interface{}{}
 	for _, row := range *d {
-		insertQuery += "(?, ?, ?, ?, ?, ?, ?), "
-		vals = append(vals, row.TimeToExecute, row.FullName, row.UserName, row.Password, row.ClassTime, row.DayOfWeek, row.Date)
+		insertQuery += "(?, ?, ?, ?, ?, ?, ?, ?), "
+		vals = append(vals, row.TimeToExecute, row.FullName, row.UserName, row.Password, row.ClassTime, row.DayOfWeek, row.Date, row.Status)
 	}
 
 	insertQuery = strings.TrimSuffix(insertQuery, ", ")
-
 	insertQuery = replaceSQL(insertQuery, "?")
 
 	fmt.Println(insertQuery)
@@ -287,7 +287,7 @@ func enableCors(w *http.ResponseWriter) {
 	(*w).Header().Set("Content-Type", "application/json")
 }
 
-func newSignupHandler(w http.ResponseWriter, r *http.Request) {
+func serverStatusHandler(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	switch r.Method {
 	case "GET":
@@ -296,17 +296,42 @@ func newSignupHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			panic("error!")
 		}
+	default:
+		http.Error(w, "Bad request verb", http.StatusBadRequest)
+	}
+}
+
+func newSignupHandler(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
+	switch r.Method {
+	case "GET":
+		http.Error(w, "Bad request verb", http.StatusBadRequest)
 	case "POST":
+		var data ScheduleData
+		db, err := sql.Open("postgres", psqlInfo)
 		var u User
-		err := json.NewDecoder(r.Body).Decode(&u)
+		err = json.NewDecoder(r.Body).Decode(&u)
 		defer r.Body.Close()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
-			panic("bad request")
+			fmt.Println("bad request")
 		}
-		_, weekday, err := parseDate(u.Schedule.Date, u.Schedule.DayOfWeek)
-		SignUp(weekday, u.Schedule.ClassTime, u.FullName, u.UserName, u.Password)
+		data = *u.calculateSignUpTimes()
+		pstmt, values := data.PrepareQuery()
+		stmt, err := db.Prepare(pstmt)
+		if err != nil {
+			fmt.Println(err)
+		}
+		resp, err := stmt.Exec(values...)
+		fmt.Println("execute sql query response", resp)
+		if err != nil {
+			fmt.Println(err)
+		}
+
 		err = json.NewEncoder(w).Encode(&u)
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
 }
 
