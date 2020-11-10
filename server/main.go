@@ -1,6 +1,11 @@
 package main
 
 import (
+	"database/sql"
+	"strings"
+
+	_ "github.com/lib/pq"
+
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -18,6 +23,14 @@ var (
 	opts = []selenium.ServiceOption{
 		selenium.Output(os.Stderr),
 	}
+	dbhost     = "0.0.0.0"
+	dbport     = 5432
+	dbuser     = "postgres"
+	dbpassword = "postgres"
+	dbname     = "mb_scheduler_db"
+	psqlInfo   = fmt.Sprintf("host=%s port=%d user=%s "+
+		"password=%s dbname=%s sslmode=disable",
+		dbhost, dbport, dbuser, dbpassword, dbname)
 )
 
 const (
@@ -97,21 +110,52 @@ type Schedule struct {
 type ScheduleDatum struct {
 	// TimeToExecute is in epoch time ms of the class
 	// `datetime - 1 day + 10min`
-	TimeToExecute int64 `json:"time"`
-	User          User  `json:"user"`
+	TimeToExecute int64  `json:"runtime"`
+	FullName      string `json:"fullname"`
+	UserName      string `json:"username"`
+	Password      string `json:"password"`
+	ClassTime     string `json:"classtime"`
+	DayOfWeek     string `json:"weekday"`
+	Date          string `json:"date"`
 }
 
 // ScheduleData - Slice of ScheduleDatum
 type ScheduleData []ScheduleDatum
 
 func main() {
-	// p := fmt.Println
+	p := fmt.Println
 	// fmt.Println("Starting services...")
 	// fmt.Printf("Using port -> %+s\n", serverPort)
-
-	s := Schedule{ClassTime: "5:45pm", Date: "", DayOfWeek: "Saturday", Frequency: "10"}
-	u := User{FullName: "Alexander Karlis", UserName: "alexanderkarlis@gmail.com", Password: "password", Schedule: s}
-	u.calculateSignUpTimes()
+	var data ScheduleData
+	db, err := sql.Open("postgres", psqlInfo)
+	p(db)
+	if err != nil {
+		panic(err)
+	}
+	u := User{
+		FullName: "Alexander Karlis",
+		UserName: "alexanderkarlis@gmail.com",
+		Password: "password",
+		Schedule: Schedule{
+			ClassTime: "5:45pm",
+			Date:      "",
+			DayOfWeek: "Saturday",
+			Frequency: "10",
+		},
+	}
+	data = *u.calculateSignUpTimes()
+	pstmt, values := data.PrepareQuery()
+	stmt, err := db.Prepare(pstmt)
+	if err != nil {
+		panic(err)
+	}
+	p(stmt)
+	p(values)
+	resp, err := stmt.Exec(values...)
+	p(resp)
+	if err != nil {
+		panic(err)
+	}
 	// http.HandleFunc("/", newSignupHandler)
 	// go func() {
 	// 	log.Fatal(http.ListenAndServe(serverPort, nil))
@@ -125,7 +169,7 @@ func main() {
 	// SignUp(weekday, u.Schedule.ClassTime, u.FullName, u.UserName, u.Password)
 }
 
-// returns the number of days until the next weeekday, int
+// Pretty prints ScheduleData struct.
 func (d *ScheduleData) pp() {
 	b, err := json.MarshalIndent(d, "", "    ")
 	if err != nil {
@@ -134,7 +178,7 @@ func (d *ScheduleData) pp() {
 	fmt.Println(string(b))
 }
 
-func (u *User) calculateSignUpTimes() *ScheduleDatum {
+func (u *User) calculateSignUpTimes() *ScheduleData {
 	p := fmt.Println
 	reqTime := days[u.Schedule.DayOfWeek]
 	todayTime := days[time.Now().Weekday().String()]
@@ -195,12 +239,45 @@ func (u *User) calculateSignUpTimes() *ScheduleDatum {
 	for i := 0; i < freq; i++ {
 		runDate := runT.AddDate(0, 0, 7*i)
 		u.Schedule.Date = runDate.Format("01/02/2006")
-		d = append(d, ScheduleDatum{TimeToExecute: runDate.Unix(), User: *u})
+		d = append(d, ScheduleDatum{
+			TimeToExecute: runDate.Unix(),
+			FullName:      u.FullName,
+			UserName:      u.UserName,
+			Password:      u.Password,
+			ClassTime:     u.Schedule.ClassTime,
+			DayOfWeek:     u.Schedule.DayOfWeek,
+			Date:          u.Schedule.Date},
+		)
 	}
 
 	d.pp()
 
-	return &ScheduleDatum{TimeToExecute: runT.Unix(), User: *u}
+	return &d
+}
+
+func replaceSQL(old, searchPattern string) string {
+	tmpCount := strings.Count(old, searchPattern)
+	for m := 1; m <= tmpCount; m++ {
+		old = strings.Replace(old, searchPattern, "$"+strconv.Itoa(m), 1)
+	}
+	return old
+}
+
+// PrepareQuery function, puts data into Postgres db
+func (d *ScheduleData) PrepareQuery() (string, []interface{}) {
+	insertQuery := "INSERT INTO schedule_rt(runtime, fullname, username, password, classtime, weekday, date) VALUES "
+	vals := []interface{}{}
+	for _, row := range *d {
+		insertQuery += "(?, ?, ?, ?, ?, ?, ?), "
+		vals = append(vals, row.TimeToExecute, row.FullName, row.UserName, row.Password, row.ClassTime, row.DayOfWeek, row.Date)
+	}
+
+	insertQuery = strings.TrimSuffix(insertQuery, ", ")
+
+	insertQuery = replaceSQL(insertQuery, "?")
+
+	fmt.Println(insertQuery)
+	return insertQuery, vals
 }
 
 func enableCors(w *http.ResponseWriter) {

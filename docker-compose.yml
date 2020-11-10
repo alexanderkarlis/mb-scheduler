@@ -1,11 +1,12 @@
 version: "3.3"
 services:
   postgres:
-    image: "postgres" # use latest official postgres version
+    image: "postgres"
     env_file:
       - database.env
     volumes:
       - ./tmp:/var/lib/postgresql/data/
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
   server:
     container_name: "server"
     build: server
