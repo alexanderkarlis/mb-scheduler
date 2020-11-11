@@ -84,13 +84,13 @@
 </style>
 
 <main>
+    <button
+        id="clear-day-btn"
+        on:click={() => {
+            $activeWeekday = '';
+        }}>clear
+    </button>
     <div id="weekdayContainer">
-        <button
-            id="clear-day-btn"
-            on:click={() => {
-                $activeWeekday = '';
-            }}>clear
-        </button>
         {#each daysOfWeek as day}
             <div>
                 <button
@@ -112,7 +112,7 @@
                                             handleBtn(e, day, time);
                                         }}
                                         class="freq-btn">
-                                        Single
+                                        1 Week
                                     </button>
                                     <button
                                         value={10}
@@ -123,12 +123,20 @@
                                         10 Weeks
                                     </button>
                                     <button
-                                        value={999}
+                                        value={25}
                                         on:click={(e) => {
                                             handleBtn(e, day, time);
                                         }}
                                         class="freq-btn">
-                                        Forever
+                                        25 Weeks
+                                    </button>
+                                    <button
+                                        value={99}
+                                        on:click={(e) => {
+                                            handleBtn(e, day, time);
+                                        }}
+                                        class="freq-btn">
+                                        99 Weeks
                                     </button>
                                 </div>
                             </Popover>

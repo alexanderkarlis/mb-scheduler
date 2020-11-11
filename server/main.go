@@ -111,53 +111,26 @@ type Schedule struct {
 type ScheduleDatum struct {
 	// TimeToExecute is in epoch time ms of the class
 	// `datetime - 1 day + 10min`
-	TimeToExecute int64  `json:"runtime"`
-	FullName      string `json:"fullname"`
-	UserName      string `json:"username"`
-	Password      string `json:"password"`
-	ClassTime     string `json:"classtime"`
-	DayOfWeek     string `json:"weekday"`
-	Date          string `json:"date"`
-	Status        bool   `json:"status"`
+	TimeToExecute int64  `json:"runtime" db:"runtime"`
+	FullName      string `json:"fullname" db:"fullname"`
+	UserName      string `json:"username" db:"username"`
+	Password      string `json:"password" db:"password"`
+	ClassTime     string `json:"classtime" db:"classtime"`
+	DayOfWeek     string `json:"weekday" db:"weekday"`
+	Date          string `json:"date" db:"date"`
+	Status        string `json:"status" db:"status"`
 }
 
 // ScheduleData - Slice of ScheduleDatum
 type ScheduleData []ScheduleDatum
 
 func main() {
-
 	fmt.Println("Starting services...")
 	fmt.Printf("Using port -> %+s\n", serverPort)
-	// var data ScheduleData
-	// db, err := sql.Open("postgres", psqlInfo)
-
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// u := User{
-	// 	FullName: "Alexander Karlis",
-	// 	UserName: "alexanderkarlis@gmail.com",
-	// 	Password: "password",
-	// 	Schedule: Schedule{
-	// 		ClassTime: "5:45pm",
-	// 		Date:      "",
-	// 		DayOfWeek: "Saturday",
-	// 		Frequency: "10",
-	// 	},
-	// }
-	// data = *u.calculateSignUpTimes()
-	// pstmt, values := data.PrepareQuery()
-	// stmt, err := db.Prepare(pstmt)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// resp, err := stmt.Exec(values...)
-	// p(resp)
-	// if err != nil {
-	// 	panic(err)
-	// }serverStatusHandler
 	http.HandleFunc("/", newSignupHandler)
 	http.HandleFunc("/status", serverStatusHandler)
+	http.HandleFunc("/all_times", getAllSchedulesHandler)
+	http.HandleFunc("/delete_schedule", deleteScheduledDateHandler)
 
 	go func() {
 		log.Fatal(http.ListenAndServe(serverPort, nil))
@@ -215,17 +188,21 @@ func (u *User) calculateSignUpTimes() *ScheduleData {
 		daysPastFromToday = (6 - reqTime - 1) + (todayTime)
 	}
 
+	fmt.Printf("days from today: %d\n", daysPastFromToday)
+
 	// fcrt first class calculated run time
 	fcrt := time.Now().AddDate(0, 0, daysPastFromToday)
+
+	// add the calculated class date to the incoming object
+	u.Schedule.Date = fcrt.Format("01/02/2006")
 	m := fcrt.AddDate(0, 0, -1)
-	fmt.Printf("days from today: %d\n", daysPastFromToday)
 
 	runT := time.Date(
 		m.Year(),
 		m.Month(),
 		m.Day(),
 		parsedClassTime.Hour(),
-		parsedClassTime.Minute()+10,
+		parsedClassTime.Minute()+10, // add ten minutes to runtime
 		parsedClassTime.Second(),
 		0,
 		parsedClassTime.Location(),
@@ -233,9 +210,10 @@ func (u *User) calculateSignUpTimes() *ScheduleData {
 
 	var d ScheduleData
 	freq, err := strconv.Atoi(u.Schedule.Frequency)
+
 	for i := 0; i < freq; i++ {
 		runDate := runT.AddDate(0, 0, 7*i)
-		u.Schedule.Date = runDate.Format("01/02/2006")
+		classDate := fcrt.AddDate(0, 0, 7*i)
 		d = append(
 			d,
 			ScheduleDatum{
@@ -245,8 +223,8 @@ func (u *User) calculateSignUpTimes() *ScheduleData {
 				Password:      u.Password,
 				ClassTime:     u.Schedule.ClassTime,
 				DayOfWeek:     u.Schedule.DayOfWeek,
-				Date:          u.Schedule.Date,
-				Status:        true,
+				Date:          classDate.Format("01/02/2006"),
+				Status:        "active",
 			},
 		)
 	}
@@ -262,6 +240,100 @@ func replaceSQL(old, searchPattern string) string {
 		old = strings.Replace(old, searchPattern, "$"+strconv.Itoa(m), 1)
 	}
 	return old
+}
+
+func getAllSchedules() *ScheduleData {
+	var s ScheduleDatum
+	var id string
+	var data ScheduleData
+
+	orderedStmt := `SELECT * FROM schedule_rt ORDER BY runtime ASC`
+
+	db, err := sql.Open("postgres", psqlInfo)
+	rows, err := db.Query(orderedStmt)
+	defer rows.Close()
+
+	for rows.Next() {
+		err := rows.Scan(&id, &s.TimeToExecute, &s.FullName, &s.UserName, &s.Password, &s.ClassTime, &s.DayOfWeek, &s.Date, &s.Status)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(s)
+		data = append(data, s)
+	}
+	err = rows.Err()
+	if err != nil {
+		log.Fatal(err)
+	}
+	// j, _ := json.MarshalIndent(data, "", "    ")
+	// fmt.Println(string(j))
+	return &data
+}
+
+func deleteScheduledDate(runtime int64) *ScheduleData {
+	var s ScheduleDatum
+	var id string
+	var data ScheduleData
+
+	db, err := sql.Open("postgres", psqlInfo)
+	deleteQuery := `DELETE FROM schedule_rt
+					WHERE runtime = $1
+					`
+	orderedStmt := `SELECT * FROM schedule_rt ORDER BY runtime ASC`
+	delStmt, err := db.Prepare(deleteQuery)
+	if err != nil {
+		fmt.Println(err)
+	}
+	resp, err := delStmt.Exec(runtime)
+	fmt.Println("execute sql query response", resp)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	rows, err := db.Query(orderedStmt)
+	defer rows.Close()
+
+	for rows.Next() {
+		err := rows.Scan(&id, &s.TimeToExecute, &s.FullName, &s.UserName, &s.Password, &s.ClassTime, &s.DayOfWeek, &s.Date, &s.Status)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(s)
+		data = append(data, s)
+	}
+	err = rows.Err()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return &data
+}
+
+// select groupby -> calculate next run time -> return value to ui
+func getGroupedSchedules() {
+	var username, weekday, classtime string
+	groupStmt := `SELECT username, weekday, classtime 
+					FROM schedule_rt 
+					GROUP BY weekday, classtime, username`
+	db, err := sql.Open("postgres", psqlInfo)
+	rows, err := db.Query(groupStmt)
+	defer rows.Close()
+	for rows.Next() {
+		err := rows.Scan(&username, &weekday, &classtime)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Println(username, weekday, classtime)
+	}
+	err = rows.Err()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err != nil {
+		fmt.Println(err)
+	}
 }
 
 // PrepareQuery function, puts data into Postgres db
@@ -285,6 +357,42 @@ func enableCors(w *http.ResponseWriter) {
 	(*w).Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 	(*w).Header().Set("Content-Type", "application/json")
+}
+
+// TODO: FINISH DELETE. DO DB QUERY AND RETURN ALL RESULTS
+func deleteScheduledDateHandler(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
+	switch r.Method {
+	case "GET":
+		http.Error(w, "Bad request verb", http.StatusBadRequest)
+	case "POST":
+		var rt struct {
+			Runtime int64 `json:"runtime"`
+		}
+		fmt.Println("in delete")
+		err := json.NewDecoder(r.Body).Decode(&rt)
+		fmt.Println("in delete")
+		fmt.Println(rt.Runtime)
+		defer r.Body.Close()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			fmt.Println("bad request")
+		}
+
+		err = json.NewEncoder(w).Encode(&rt)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+}
+
+func getAllSchedulesHandler(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
+	a := getAllSchedules()
+	err := json.NewEncoder(w).Encode(&a)
+	if err != nil {
+		panic("error!")
+	}
 }
 
 func serverStatusHandler(w http.ResponseWriter, r *http.Request) {
