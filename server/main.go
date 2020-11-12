@@ -2,20 +2,17 @@ package main
 
 import (
 	"database/sql"
-	"log"
-	"strings"
-
-	_ "github.com/lib/pq"
-
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
-
 	"strconv"
+	"strings"
 	"time"
 
+	_ "github.com/lib/pq"
 	"github.com/tebeka/selenium"
 )
 
@@ -32,6 +29,7 @@ var (
 	psqlInfo   = fmt.Sprintf("host=%s port=%d user=%s "+
 		"password=%s dbname=%s sslmode=disable",
 		dbhost, dbport, dbuser, dbpassword, dbname)
+	db, err = sql.Open("postgres", psqlInfo)
 )
 
 const (
@@ -249,7 +247,6 @@ func getAllSchedules() *ScheduleData {
 
 	orderedStmt := `SELECT * FROM schedule_rt ORDER BY runtime ASC`
 
-	db, err := sql.Open("postgres", psqlInfo)
 	rows, err := db.Query(orderedStmt)
 	defer rows.Close()
 
@@ -271,15 +268,16 @@ func getAllSchedules() *ScheduleData {
 	return &data
 }
 
+// deletes row based on runtime key(?), runs query to remove dupes
+// returns total dataset
 func deleteScheduledDate(runtime int64) *ScheduleData {
 	var s ScheduleDatum
 	var id string
 	var data ScheduleData
 
-	db, err := sql.Open("postgres", psqlInfo)
 	deleteQuery := `DELETE FROM schedule_rt
-					WHERE runtime = $1
-					`
+					WHERE runtime = $1`
+
 	orderedStmt := `SELECT * FROM schedule_rt ORDER BY runtime ASC`
 	delStmt, err := db.Prepare(deleteQuery)
 	if err != nil {
@@ -317,7 +315,7 @@ func getGroupedSchedules() {
 	groupStmt := `SELECT username, weekday, classtime 
 					FROM schedule_rt 
 					GROUP BY weekday, classtime, username`
-	db, err := sql.Open("postgres", psqlInfo)
+
 	rows, err := db.Query(groupStmt)
 	defer rows.Close()
 	for rows.Next() {
@@ -371,15 +369,15 @@ func deleteScheduledDateHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		fmt.Println("in delete")
 		err := json.NewDecoder(r.Body).Decode(&rt)
-		fmt.Println("in delete")
-		fmt.Println(rt.Runtime)
 		defer r.Body.Close()
+
+		data := deleteScheduledDate(rt.Runtime)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			fmt.Println("bad request")
 		}
 
-		err = json.NewEncoder(w).Encode(&rt)
+		err = json.NewEncoder(w).Encode(data)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -409,6 +407,7 @@ func serverStatusHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// TOOD: move POST function to separate function
 func newSignupHandler(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	switch r.Method {
@@ -416,7 +415,7 @@ func newSignupHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bad request verb", http.StatusBadRequest)
 	case "POST":
 		var data ScheduleData
-		db, err := sql.Open("postgres", psqlInfo)
+
 		var u User
 		err = json.NewDecoder(r.Body).Decode(&u)
 		defer r.Body.Close()
@@ -432,6 +431,19 @@ func newSignupHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		resp, err := stmt.Exec(values...)
 		fmt.Println("execute sql query response", resp)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		deleteDupesQuery, _ := ioutil.ReadFile("../scripts/delete_dupes.sql")
+		fmt.Println(string(deleteDupesQuery))
+
+		removeDupesStmt, err := db.Prepare(string(deleteDupesQuery))
+		if err != nil {
+			fmt.Println(err)
+		}
+		removeDupesResp, err := removeDupesStmt.Exec()
+		fmt.Println("removeDupesStmt sql query response", removeDupesResp)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -519,8 +531,9 @@ func SignUp(weekday, classTime, fullName, userName, password string) bool {
 	bookText, _ := bookNowButton.Text()
 	fmt.Println(bookText)
 	bookNowButton.Click()
-	// another loop to make sure all times load before moving on
 
+	loopBackoff := 0
+	// another loop to make sure all times load before moving on
 	for {
 		orderAmt, err := driver.FindElement(selenium.ByXPATH, orderTotalXpath)
 		if err == nil {
@@ -533,6 +546,7 @@ func SignUp(weekday, classTime, fullName, userName, password string) bool {
 			}
 		}
 		time.Sleep(2000 * time.Millisecond)
+		loopBackoff++
 	}
 
 	driverSnapshot(driver, "buy")

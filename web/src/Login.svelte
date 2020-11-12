@@ -19,22 +19,63 @@
 </script>
 
 <style>
+    .comp-box {
+        padding: 25px;
+    }
     .content {
-        padding-top: 65px;
+        padding-top: 25px;
         display: grid;
         grid-template-columns: 20% 40%;
         grid-column-gap: 10px;
     }
-    input {
-        width: 300px;
+    .subtitle {
+        font-size: 14px;
+        font-weight: 300;
+    }
+    .header {
+        text-transform: capitalize;
+    }
+    .form-controller {
+        justify-content: space-evenly;
+        display: inline-grid;
     }
 </style>
 
-<form class="content">
-    Full Name:
-    <input type="text" id="fname" bind:value={$user.name} />
-    Username:
-    <input type="text" id="uname" bind:value={$user.username} />
-    Password:
-    <input type="password" id="pword" bind:value={$user.password} />
-</form>
+<!-- <div class="comp-box"> -->
+<div class="w3-card-2 tbl-outln comp-box">
+    <h2 class="header">mindbody login info</h2>
+    <span class="subtitle">
+        Enter your Mindbody username, password, and full name (as it appears on
+        your account. e.g. - `Alexander Karlis`)
+    </span>
+
+    <div class="content">
+        <form>
+            <div class="form-group form-controller">
+                <label for="fname">Full Name</label>
+                <input
+                    class="mui-form"
+                    label="Full Name"
+                    id="fname"
+                    bind:value={$user.name} />
+            </div>
+            <div class="form-group form-controller">
+                <label for="uname">User Name (email)</label>
+                <input
+                    class="mui-form"
+                    label="Username"
+                    id="uname"
+                    bind:value={$user.username} />
+            </div>
+            <div class="form-group form-controller">
+                <label class="form-check-label" for="pword">Password</label>
+                <input
+                    class="mui-form"
+                    label="Password"
+                    type="password"
+                    id="pword"
+                    bind:value={$user.password} />
+            </div>
+        </form>
+    </div>
+</div>

@@ -1,12 +1,23 @@
 <script lang="typescript">
     import Scheduler from "./Scheduler.svelte";
-    import Data from "./Data.svelte";
+    import Data from "./ScheduledData.svelte";
     import Login from "./Login.svelte";
+    import RunHistory from "./RunHistory.svelte";
 
     let serverStatus = null;
+    let n = new Date();
+
+    let timeNow = `${n.toLocaleDateString()} ${n.toLocaleTimeString()}`;
+    var myfunc = setInterval(function () {
+        var now = new Date();
+        timeNow = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+    }, 1000);
 </script>
 
 <style>
+    #app-container {
+        margin: 50px;
+    }
     h1 {
         color: #ff3e00;
         text-transform: uppercase;
@@ -15,26 +26,37 @@
     }
     #opts {
         display: flex;
-        flex-direction: row;
+        flex-direction: column;
     }
-    #app-container {
-        margin: 50px;
+    span {
+        color: purple;
+        font-family: "Comic Sans MS", cursive;
+        font-size: 1.5em;
     }
 </style>
 
 <main>
     <div id="app-container">
-        <h1>mindbody scheduler</h1>
-        <span>server status: {serverStatus && serverStatus.status}</span>
-        <br />
-        <br />
-
+        <div>
+            <h1>mindbody scheduler</h1>
+            <div
+                style="padding: 10px; display: flex; flex-direction: row; justify-content: space-between;">
+                <span>server status:
+                    {serverStatus && serverStatus.status}</span>
+                <span>{timeNow}</span>
+            </div>
+        </div>
         <div id="opts">
             <div>
                 <Login bind:serverStatus />
                 <Scheduler />
             </div>
-            <Data />
+            <div>
+                <Data />
+            </div>
+            <div>
+                <RunHistory />
+            </div>
         </div>
     </div>
 </main>
