@@ -23,3 +23,5 @@ export const Frequency: Writable<IFrequency> = writable({
 export const FrequencyArray: Writable<Array<IFrequency>> = writable([]);
 
 export const PostAttemptMessage = writable(false);
+
+export const ScheduleArray = writable([]);

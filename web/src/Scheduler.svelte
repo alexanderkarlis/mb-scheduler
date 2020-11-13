@@ -1,4 +1,6 @@
 <script lang="typescript">
+    import { ScheduleArray } from "./store";
+    import { onMount } from "svelte";
     import {
         activeWeekday,
         activeWeekdayTimes,
@@ -11,23 +13,27 @@
     import Alert from "./Alert.svelte";
     import { MESSAGE_TYPES } from "./constants";
 
-    let scheduleArray = [];
+    onMount(async () => {
+        await getScheduledTimes();
+    });
 
-    export async function getScheduledTimes() {
-        console.log("data component mounted");
+    const getScheduledTimes = async () => {
+        console.log("getting new scheduled times");
         await fetch(`http://0.0.0.0:8888/all_times`)
             .then((r) => r.json())
             .catch((e) => {
                 console.log(e);
             })
             .then((data) => {
+                console.log(data);
                 if (data && data.length) {
-                    scheduleArray = [...data];
+                    $ScheduleArray = [...data];
                 } else {
-                    scheduleArray = [];
+                    $ScheduleArray = [];
                 }
             });
-    }
+    };
+
     let daysOfWeek = [
         "Sunday",
         "Monday",
@@ -180,8 +186,8 @@
     <div style="padding: 15px;">
         <h2>Queued Sign-up Scheduler</h2>
         <span class="subtitle">
-            Select a day and time. Review the information to be saved. Click the ✅ to confirm, or the
-            ❌ to remove from insertion
+            Select a day and time. Review the information to be saved. Click the
+            ✅ to confirm, or the ❌ to remove from insertion
         </span>
     </div>
     <div

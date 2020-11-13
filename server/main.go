@@ -135,7 +135,8 @@ func main() {
 	go func() {
 		log.Fatal(http.ListenAndServe(serverPort, nil))
 	}()
-	ticker := time.NewTicker(time.Second)
+
+	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 	done := make(chan bool)
 	go func() {
@@ -149,6 +150,10 @@ func main() {
 			return
 		case t := <-ticker.C:
 			fmt.Println("Current time: ", t)
+			data := getAllSchedules(1)
+			nextRow := (*data)[0]
+			time.Sleep(10 * time.Second)
+			fmt.Println(nextRow)
 		}
 	}
 
@@ -247,12 +252,16 @@ func replaceSQL(old, searchPattern string) string {
 	return old
 }
 
-func getAllSchedules() *ScheduleData {
+func getAllSchedules(limit int) *ScheduleData {
 	var s ScheduleDatum
 	var id string
 	var data ScheduleData
-
-	orderedStmt := `SELECT * FROM schedule_rt ORDER BY runtime ASC`
+	var orderedStmt string
+	if limit > 0 {
+		orderedStmt = fmt.Sprintf(`SELECT * FROM schedule_rt ORDER BY runtime ASC LIMIT %d`, limit)
+	} else {
+		orderedStmt = `SELECT * FROM schedule_rt ORDER BY runtime ASC`
+	}
 
 	rows, err := db.Query(orderedStmt)
 	defer rows.Close()
@@ -270,8 +279,6 @@ func getAllSchedules() *ScheduleData {
 	if err != nil {
 		log.Fatal(err)
 	}
-	// j, _ := json.MarshalIndent(data, "", "    ")
-	// fmt.Println(string(j))
 	return &data
 }
 
@@ -393,7 +400,7 @@ func deleteScheduledDateHandler(w http.ResponseWriter, r *http.Request) {
 
 func getAllSchedulesHandler(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
-	a := getAllSchedules()
+	a := getAllSchedules(0)
 	err := json.NewEncoder(w).Encode(&a)
 	if err != nil {
 		panic("error!")

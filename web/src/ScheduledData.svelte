@@ -1,27 +1,5 @@
 <script>
-    import { onMount } from "svelte";
-
-    let scheduleArray = [];
-
-    export async function getScheduledTimes() {
-        console.log("data component mounted");
-        await fetch(`http://0.0.0.0:8888/all_times`)
-            .then((r) => r.json())
-            .catch((e) => {
-                console.log(e);
-            })
-            .then((data) => {
-                if (data && data.length) {
-                    scheduleArray = [...data];
-                } else {
-                    scheduleArray = [];
-                }
-            });
-    }
-
-    onMount(async () => {
-        await getScheduledTimes();
-    });
+    import { ScheduleArray } from "./store";
 
     const deleteScheduledRun = async (e) => {
         const idx = e.target.value;
@@ -32,9 +10,9 @@
         });
         let resJson = await r.json();
         if (resJson && resJson.length) {
-            scheduleArray = [...resJson];
+            $ScheduleArray = [...resJson];
         } else {
-            scheduleArray = [];
+            $ScheduleArray = [];
         }
     };
 
@@ -127,7 +105,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {#each scheduleArray as sched, i}
+                    {#each $ScheduleArray as sched, i}
                         <tr>
                             <td>{i}</td>
                             <td>{sched.username}</td>
