@@ -122,6 +122,8 @@ type ScheduleDatum struct {
 // ScheduleData - Slice of ScheduleDatum
 type ScheduleData []ScheduleDatum
 
+func statusUpdate() string { return "" }
+
 func main() {
 	fmt.Println("Starting services...")
 	fmt.Printf("Using port -> %+s\n", serverPort)
@@ -133,8 +135,23 @@ func main() {
 	go func() {
 		log.Fatal(http.ListenAndServe(serverPort, nil))
 	}()
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	done := make(chan bool)
+	go func() {
+		time.Sleep(10 * time.Second)
+		done <- true
+	}()
 	for {
+		select {
+		case <-done:
+			fmt.Println("Done!")
+			return
+		case t := <-ticker.C:
+			fmt.Println("Current time: ", t)
+		}
 	}
+
 }
 
 // Pretty prints ScheduleData struct.
@@ -147,7 +164,6 @@ func (d *ScheduleData) pp() {
 }
 
 func (u *User) calculateSignUpTimes() *ScheduleData {
-	p := fmt.Println
 	reqTime := days[u.Schedule.DayOfWeek]
 	todayTime := days[time.Now().Weekday().String()]
 
@@ -156,11 +172,6 @@ func (u *User) calculateSignUpTimes() *ScheduleData {
 	var parsedClassTime time.Time
 	parsedClassTime, err := time.Parse("03:04pm", fmt.Sprintf("%07s", u.Schedule.ClassTime))
 	if reqTime == todayTime {
-		p("today -> ", time.Now().Weekday())
-		fmt.Printf("todayDate: %d\n", todayTime)
-		fmt.Printf("reqDate: %d\n", reqTime)
-		p(u.Schedule.ClassTime)
-
 		if err != nil {
 			panic("error parsing date")
 		}
@@ -172,10 +183,8 @@ func (u *User) calculateSignUpTimes() *ScheduleData {
 		// check and see if classtime has already passed for today
 		if nh*3600+nm*60+ns < ph*3600+pm*60+ps {
 			daysPastFromToday = 0
-			p("class has NOT happened yet.")
 		} else {
 			daysPastFromToday = 7
-			p("class has ALREADY happened. starting with next instance of day")
 		}
 
 	} else if reqTime > todayTime {
@@ -185,8 +194,6 @@ func (u *User) calculateSignUpTimes() *ScheduleData {
 		// count back up to the reqTime.
 		daysPastFromToday = (6 - reqTime - 1) + (todayTime)
 	}
-
-	fmt.Printf("days from today: %d\n", daysPastFromToday)
 
 	// fcrt first class calculated run time
 	fcrt := time.Now().AddDate(0, 0, daysPastFromToday)
