@@ -25,3 +25,4 @@ export const FrequencyArray: Writable<Array<IFrequency>> = writable([]);
 export const PostAttemptMessage = writable(false);
 
 export const ScheduleArray = writable([]);
+export const ScheduleHistoryArray = writable([]);

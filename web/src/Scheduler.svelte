@@ -13,10 +13,6 @@
     import Alert from "./Alert.svelte";
     import { MESSAGE_TYPES } from "./constants";
 
-    onMount(async () => {
-        await getScheduledTimes();
-    });
-
     const getScheduledTimes = async () => {
         console.log("getting new scheduled times");
         await fetch(`http://0.0.0.0:8888/all_times`)
@@ -33,6 +29,18 @@
                 }
             });
     };
+
+    onMount(async () => {
+        await getScheduledTimes();
+    });
+
+    setInterval(async () => {
+        try {
+            await getScheduledTimes();
+        } catch (e) {
+            console.log(e);
+        }
+    }, 5000);
 
     let daysOfWeek = [
         "Sunday",
@@ -101,7 +109,7 @@
                 frequency: freqObj.freq,
             },
         };
-        let r = await fetch("http://localhost:8888/", {
+        let r = await fetch("http://0.0.0.0:8888/", {
             method: "post",
             body: JSON.stringify(reqObj),
         });

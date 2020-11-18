@@ -5,16 +5,21 @@
 
     onMount(async () => {
         console.log("login mounted");
-        await fetch(`http://0.0.0.0:8888/status`)
-            .then((r) => r.json())
-            .catch((e) => {
-                serverStatus = "NOT ok";
-            })
-            .then((data) => {
-                serverStatus = data;
-                console.log(data);
-                return data;
-            });
+        try {
+            await fetch(`http://0.0.0.0:8888/status`)
+                .then((r) => r.json())
+                .catch((e) => {
+                    serverStatus = "NOT ok";
+                })
+                .then((data) => {
+                    serverStatus = data;
+                    console.log(data);
+                    return data;
+                })
+                .catch((e) => console.log(e));
+        } catch (e) {
+            console.log(e);
+        }
     });
 </script>
 
@@ -60,7 +65,7 @@
                     bind:value={$user.name} />
             </div>
             <div class="form-group form-controller">
-                <label for="uname">User Name (email)</label>
+                <label for="uname">User Email</label>
                 <input
                     class="mui-form"
                     label="Username"

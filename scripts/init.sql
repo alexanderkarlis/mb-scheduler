@@ -1,7 +1,7 @@
 -- schema.sql
 -- Since we might run the import many times we'll drop if exists
-DROP DATABASE IF EXISTS mb_scheduler_db;
-CREATE DATABASE mb_scheduler_db;
+-- DROP DATABASE IF EXISTS mb_scheduler_db;
+-- CREATE DATABASE mb_scheduler_db;
 
 \c mb_scheduler_db
 DROP TABLE IF EXISTS schedule_rt;

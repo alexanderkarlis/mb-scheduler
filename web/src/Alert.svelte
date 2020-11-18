@@ -2,11 +2,15 @@
     import { MESSAGE_TYPES } from "./constants";
     import { PostAttemptMessage } from "./store";
 
-    export let message = '';
+    export let message = "";
     export let type: MESSAGE_TYPES;
     export let open;
 
     let show = open || false;
+    setTimeout(() => {
+        console.log("setting alert to false");
+        $PostAttemptMessage = false;
+    }, 5000);
 </script>
 
 <style>

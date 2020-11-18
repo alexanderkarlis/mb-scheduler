@@ -1,19 +1,35 @@
 version: "3.3"
 services:
-  postgres:
-    image: "postgres"
-    env_file:
-      - database.env
-    volumes:
-      - ./tmp:/var/lib/postgresql/data/
-      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
-  server:
-    container_name: "server"
-    build: server
-    ports:
-      - "8888:8888"
-  web:
-    container_name: "web"
-    build: web
-    ports:
-      - "5001:80"
+    postgres:
+        # ports:
+        #   - "5432:5432"
+        image: "postgres"
+        environment:
+            - POSTGRES_USER=postgres
+            - POSTGRES_PASSWORD=postgres
+            - POSTGRES_DB=mb_scheduler_db
+        volumes:
+            - ./tmp:/var/lib/postgresql/data/
+            - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U postgres"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+    server:
+        container_name: "server"
+        build: server
+        environment:
+            - DB_HOST=postgres
+            - DISPLAY=:0
+        depends_on: [postgres]
+        links:
+            - postgres
+        ports:
+            - "8888:8888"
+    web:
+        container_name: "web"
+        build: web
+        depends_on: [postgres]
+        ports:
+            - "5001:80"

@@ -3,8 +3,8 @@
 
     const deleteScheduledRun = async (e) => {
         const idx = e.target.value;
-        const rt = { runtime: scheduleArray[idx].runtime };
-        let r = await fetch("http://localhost:8888/delete_schedule", {
+        const rt = { runtime: $ScheduleArray[idx].runtime };
+        let r = await fetch("http://0.0.0.0:8888/delete_schedule", {
             method: "post",
             body: JSON.stringify(rt),
         });
@@ -17,7 +17,7 @@
     };
 
     const epochToDateString = (epoch) => {
-        var d = new Date(epoch * 1000 + 5 * 60 * 60 * 1000);
+        var d = new Date(epoch * 1000);
         return `${d.toDateString()} ${d.toLocaleTimeString()}`;
     };
 </script>

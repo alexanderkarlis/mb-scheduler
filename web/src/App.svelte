@@ -7,10 +7,21 @@
     let serverStatus = null;
     let n = new Date();
 
+    const DOW = {
+        1: "Monday",
+        2: "Tuesday",
+        3: "Wednesday",
+        4: "Thursday",
+        5: "Friday",
+        6: "Saturday",
+        7: "Sunday",
+    };
     let timeNow = `${n.toLocaleDateString()} ${n.toLocaleTimeString()}`;
     var myfunc = setInterval(function () {
         var now = new Date();
-        timeNow = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+        timeNow = `${
+            DOW[now.getDay()]
+        } - ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
     }, 1000);
 </script>
 
