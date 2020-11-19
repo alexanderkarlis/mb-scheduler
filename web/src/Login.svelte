@@ -21,6 +21,14 @@
             console.log(e);
         }
     });
+    function showPasword() {
+        var x = document.getElementById("pword") as HTMLInputElement;
+        if (x.type === "password") {
+            x.type = "text";
+        } else {
+            x.type = "password";
+        }
+    }
 </script>
 
 <style>
@@ -80,6 +88,9 @@
                     type="password"
                     id="pword"
                     bind:value={$user.password} />
+            </div>
+            <div>
+                <input type="checkbox" on:click={showPasword} />Show Password
             </div>
         </form>
     </div>

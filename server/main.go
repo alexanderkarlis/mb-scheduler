@@ -59,7 +59,7 @@ const (
 	geckoDriverPath        = "./adds/geckodriver"
 	geckoDriverPathWindows = "./adds/geckodriver_windows.exe"
 	baseURL                = "https://mindbody.io/"
-	actualURL              = "https://mindbody.io/locations/elite-core-fitness"
+	actualURL              = "https://www.mindbodyonline.com/explore/locations/elite-core-fitness"
 
 	// some of these are full Xpaths, thus if the website under goes any cosmetic UI chnages,
 	// it is likely these will break
@@ -142,6 +142,7 @@ func statusUpdate() string { return "" }
 func main() {
 	log.Println("Starting services...")
 	log.Printf("Using port -> %+s\n", serverPort)
+
 	http.HandleFunc("/", newSignupHandler)
 	http.HandleFunc("/status", serverStatusHandler)
 	http.HandleFunc("/all_times", getAllSchedulesHandler)
@@ -624,7 +625,7 @@ func SignUp(weekday, classTime, fullName, userName, password string) bool {
 	}
 	defer service.Stop()
 
-	caps := selenium.Capabilities{"browserName": "firefox", "headless": false}
+	caps := selenium.Capabilities{"browserName": "firefox", "headless": true}
 	driver, err := selenium.NewRemote(caps, fmt.Sprintf("http://0.0.0.0:%d/wd/hub", SeleniumPort))
 	if err != nil {
 		log.Println(err)
@@ -681,7 +682,23 @@ func SignUp(weekday, classTime, fullName, userName, password string) bool {
 		return false
 	}
 
-	dowDiv, err := driver.FindElement(selenium.ByXPATH, fmt.Sprintf(dayOfWeekXpath, weekday))
+	time.Sleep(1000 * time.Millisecond)
+	var dowDiv selenium.WebElement
+	for {
+		dowDiv, err = driver.FindElement(selenium.ByXPATH, fmt.Sprintf(dayOfWeekXpath, weekday))
+		if err == nil {
+			log.Println("found DOW button")
+			break
+		}
+		if loopBackoff > 20 {
+			log.Println("CRASH LOOP, BACKOFF -- orderTotalText")
+			return false
+		}
+		time.Sleep(2000 * time.Millisecond)
+		log.Printf("loopBackoff at %d\n", loopBackoff)
+		loopBackoff++
+	}
+
 	dowDiv.Click()
 
 	var classTimeBox selenium.WebElement

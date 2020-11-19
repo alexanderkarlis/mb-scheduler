@@ -21,7 +21,7 @@ services:
         build: server
         environment:
             - DB_HOST=postgres
-            - DISPLAY=:0
+            - DISPLAY=:99
         depends_on: [postgres]
         links:
             - postgres

@@ -36,7 +36,7 @@ RUN mkdir -p /usr/src/app/server
 RUN mkdir -p /usr/local/bin/
 COPY . /usr/src/app/server
 
-RUN chmod +x start.sh
+RUN chmod a+x start.sh
 RUN go mod download
 RUN GOOS=linux go build -o backend main.go
 
