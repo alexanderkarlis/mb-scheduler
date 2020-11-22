@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/smtp"
 	"os"
 	"strconv"
 	"strings"
@@ -49,8 +48,6 @@ func init() {
 }
 
 const (
-	emailSender         = "mindbody.scheduler.app@gmail.com"
-	emailSenderPassword = "magicalraccoon369"
 	// SeleniumPort is the listening port for running the proxy
 	SeleniumPort = 4444
 	// serverPort for the running UI.
@@ -170,7 +167,6 @@ func main() {
 					success := SignUp(shortDOW(firstRow.DayOfWeek), firstRow.ClassTime, firstRow.FullName, firstRow.UserName, firstRow.Password)
 					log.Printf("%+v\n", success)
 					firstRow.setRowHistory(success)
-					sendEmail(&firstRow, success)
 					firstRow.TimeToExecute = 0
 					if success {
 						log.Println("SUCCESS!")
@@ -282,44 +278,6 @@ func replaceSQL(old, searchPattern string) string {
 		old = strings.Replace(old, searchPattern, "$"+strconv.Itoa(m), 1)
 	}
 	return old
-}
-
-func sendEmail(r *ScheduleDatum, success bool) {
-	to := []string{
-		r.UserName,
-	}
-	// smtp server configuration.
-	smtpHost := "smtp.gmail.com"
-	smtpPort := "587"
-
-	var message string
-	if success {
-		message = `To: "%s" <%s>
-From: "Mindbody-Scheduler App" <%s>
-Subject: Automated Class Signup SUCCESS!
-
-Hello %s. You have successfully been signed up for the %s class on %s (%s). Please check the app to confirm.
-`
-	} else {
-		message = `To: "%s" <%s>
-From: "Mindbody-Scheduler App" <%s>
-Subject: Automated Class Signup FAILED!
-
-Hello %s. You have NOT been successfully been signed up for the %s class on %s (%s). Please check the app to confirm.
-`
-	}
-	m := fmt.Sprintf(message, r.FullName, r.UserName, emailSender, r.FullName, r.ClassTime, r.DayOfWeek, r.Date)
-	log.Println(m)
-	// Authentication.
-	auth := smtp.PlainAuth("", emailSender, emailSenderPassword, smtpHost)
-
-	// Sending email.
-	err := smtp.SendMail(smtpHost+":"+smtpPort, auth, emailSender, to, []byte(m))
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	log.Println("Email Sent Successfully!")
 }
 
 func getAllSchedules(limit int) *ScheduleData {
