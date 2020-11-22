@@ -7,21 +7,17 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/smtp"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	_ "github.com/lib/pq"
-	"github.com/tebeka/selenium"
+
+	"github.com/alexanderkarlis/mindsched/pkg/mindreader"
 )
 
 var (
-	// selenium opts
-	opts = []selenium.ServiceOption{
-		selenium.Output(os.Stderr),
-	}
 	dbport     = 5432
 	dbuser     = "postgres"
 	dbpassword = "postgres"
@@ -49,40 +45,10 @@ func init() {
 }
 
 const (
-	emailSender         = "mindbody.scheduler.app@gmail.com"
-	emailSenderPassword = "magicalraccoon369"
 	// SeleniumPort is the listening port for running the proxy
 	SeleniumPort = 4444
 	// serverPort for the running UI.
-	serverPort             = ":8888"
-	seleniumPath           = "./adds/selenium-server-standalone-3.141.59.jar"
-	geckoDriverPath        = "./adds/geckodriver"
-	geckoDriverPathWindows = "./adds/geckodriver_windows.exe"
-	baseURL                = "https://mindbody.io/"
-	actualURL              = "https://www.mindbodyonline.com/explore/locations/elite-core-fitness"
-
-	// some of these are full Xpaths, thus if the website under goes any cosmetic UI chnages,
-	// it is likely these will break
-	dismissNotificationXPath = "//span[@class=\"notification-dismiss\"]"
-	loginXpath               = "//button[contains(text(), 'Login')]"
-	emailInputXpath          = "/html/body/div[6]/div/div/div/form/div[1]/div[1]/div/input"
-	passwordInputXpath       = "/html/body/div[6]/div/div/div/form/div[2]/div[1]/div/input"
-	loginSubmitXpath         = "/html/body/div[6]/div/div/div/form/button[1]"
-	loginSubmit2Xpath        = "/html/body/div[6]/div/div/div/form/button[1]"
-	namedBoxXpath            = "//div[contains(text(), '%s')]"
-	scheduleXpath            = "//a[contains(text(), 'Schedule')]"
-	dayOfWeekXpath           = "//div[contains(text(), '%s')]"
-	timeOfDayXpath           = "//h5[contains(text(), '%s')]"
-	timeSlotClassName        = "columns is-vcentered ClassTimeScheduleItemDesktop_separator__1vvuL"
-	bookNowXpath             = "//div/h5[contains(text(), \"%s\")]/../../div[@class=\"column\"]//button[contains(text(), 'Book Now')]"
-	orderTotalXpath          = "//h5[contains(text(), '$0.00')]"
-	buyXpath                 = "//button[contains(text(), 'Buy')]"
-	orderConfimationXpath    = "//p[contains(text(), 'Order Confirmed')]"
-)
-
-const (
-	every Frequency = iota
-	single
+	serverPort = ":8888"
 )
 
 var days = map[string]int{
@@ -140,6 +106,7 @@ type ScheduleData []ScheduleDatum
 func statusUpdate() string { return "" }
 
 func main() {
+	mindreader.GetClassTimes()
 	log.Println("Starting services...")
 	log.Printf("Using port -> %+s\n", serverPort)
 
@@ -156,35 +123,35 @@ func main() {
 	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
 
-	var nextRowData *ScheduleData
-	var firstRow ScheduleDatum
-	for {
-		select {
-		case <-ticker.C:
-			nextRowData = getAllSchedules(1)
-			log.Println("Checking rows")
-			if len(*nextRowData) > 0 {
-				firstRow = (*nextRowData)[0]
-				log.Printf("firstRow: %+v\n", firstRow)
-				if firstRow.TimeToExecute < time.Now().Unix() && firstRow.TimeToExecute != 0 {
-					success := SignUp(shortDOW(firstRow.DayOfWeek), firstRow.ClassTime, firstRow.FullName, firstRow.UserName, firstRow.Password)
-					log.Printf("%+v\n", success)
-					firstRow.setRowHistory(success)
-					sendEmail(&firstRow, success)
-					firstRow.TimeToExecute = 0
-					if success {
-						log.Println("SUCCESS!")
-					} else {
-						log.Println("FAILED!")
-					}
-				} else {
-					log.Printf("NOW %d\n", time.Now().Unix())
-					log.Printf("TESTING %d\n", firstRow.TimeToExecute)
-					log.Println("NOT executed")
-				}
-			}
-		}
-	}
+	// var nextRowData *ScheduleData
+	// var firstRow ScheduleDatum
+	// for {
+	// 	select {
+	// 	case <-ticker.C:
+	// 		nextRowData = getAllSchedules(1)
+	// 		log.Println("Checking rows")
+	// 		if len(*nextRowData) > 0 {
+	// 			firstRow = (*nextRowData)[0]
+	// 			log.Printf("firstRow: %+v\n", firstRow)
+	// 			if firstRow.TimeToExecute < time.Now().Unix() && firstRow.TimeToExecute != 0 {
+	// 				success := SignUp(shortDOW(firstRow.DayOfWeek), firstRow.ClassTime, firstRow.FullName, firstRow.UserName, firstRow.Password)
+	// 				log.Printf("%+v\n", success)
+	// 				firstRow.setRowHistory(success)
+	// 				sendEmail(&firstRow, success)
+	// 				firstRow.TimeToExecute = 0
+	// 				if success {
+	// 					log.Println("SUCCESS!")
+	// 				} else {
+	// 					log.Println("FAILED!")
+	// 				}
+	// 			} else {
+	// 				log.Printf("NOW %d\n", time.Now().Unix())
+	// 				log.Printf("TESTING %d\n", firstRow.TimeToExecute)
+	// 				log.Println("NOT executed")
+	// 			}
+	// 		}
+	// 	}
+	// }
 
 }
 
@@ -284,43 +251,43 @@ func replaceSQL(old, searchPattern string) string {
 	return old
 }
 
-func sendEmail(r *ScheduleDatum, success bool) {
-	to := []string{
-		r.UserName,
-	}
-	// smtp server configuration.
-	smtpHost := "smtp.gmail.com"
-	smtpPort := "587"
+// func sendEmail(r *ScheduleDatum, success bool) {
+// 	to := []string{
+// 		r.UserName,
+// 	}
+// 	// smtp server configuration.
+// 	smtpHost := "smtp.gmail.com"
+// 	smtpPort := "587"
 
-	var message string
-	if success {
-		message = `To: "%s" <%s>
-From: "Mindbody-Scheduler App" <%s>
-Subject: Automated Class Signup SUCCESS!
+// 	var message string
+// 	if success {
+// 		message = `To: "%s" <%s>
+// From: "Mindbody-Scheduler App" <%s>
+// Subject: Automated Class Signup SUCCESS!
 
-Hello %s. You have successfully been signed up for the %s class on %s (%s). Please check the app to confirm.
-`
-	} else {
-		message = `To: "%s" <%s>
-From: "Mindbody-Scheduler App" <%s>
-Subject: Automated Class Signup FAILED!
+// Hello %s. You have successfully been signed up for the %s class on %s (%s). Please check the app to confirm.
+// `
+// 	} else {
+// 		message = `To: "%s" <%s>
+// From: "Mindbody-Scheduler App" <%s>
+// Subject: Automated Class Signup FAILED!
 
-Hello %s. You have NOT been successfully been signed up for the %s class on %s (%s). Please check the app to confirm.
-`
-	}
-	m := fmt.Sprintf(message, r.FullName, r.UserName, emailSender, r.FullName, r.ClassTime, r.DayOfWeek, r.Date)
-	log.Println(m)
-	// Authentication.
-	auth := smtp.PlainAuth("", emailSender, emailSenderPassword, smtpHost)
+// Hello %s. You have NOT been successfully been signed up for the %s class on %s (%s). Please check the app to confirm.
+// `
+// 	}
+// 	m := fmt.Sprintf(message, r.FullName, r.UserName, emailSender, r.FullName, r.ClassTime, r.DayOfWeek, r.Date)
+// 	log.Println(m)
+// 	// Authentication.
+// 	auth := smtp.PlainAuth("", emailSender, emailSenderPassword, smtpHost)
 
-	// Sending email.
-	err := smtp.SendMail(smtpHost+":"+smtpPort, auth, emailSender, to, []byte(m))
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	log.Println("Email Sent Successfully!")
-}
+// 	// Sending email.
+// 	err := smtp.SendMail(smtpHost+":"+smtpPort, auth, emailSender, to, []byte(m))
+// 	if err != nil {
+// 		log.Println(err)
+// 		return
+// 	}
+// 	log.Println("Email Sent Successfully!")
+// }
 
 func getAllSchedules(limit int) *ScheduleData {
 	var s ScheduleDatum
@@ -611,191 +578,11 @@ func newSignupHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// SignUp signs up the user for a specified class time.
-// ** @params weekday, date, classTime, fullName, userName, password string
-func SignUp(weekday, classTime, fullName, userName, password string) bool {
-	currentWorkingDirectory, err := os.Getwd()
-	log.Println(currentWorkingDirectory)
-	selenium.SetDebug(true)
-
-	service, err := selenium.NewSeleniumService(seleniumPath, SeleniumPort, opts...)
-	if err != nil {
-		log.Println(err)
-		return false
-	}
-	defer service.Stop()
-
-	caps := selenium.Capabilities{"browserName": "firefox", "headless": true}
-	driver, err := selenium.NewRemote(caps, fmt.Sprintf("http://0.0.0.0:%d/wd/hub", SeleniumPort))
-	if err != nil {
-		log.Println(err)
-		return false
-	}
-
-	driver.ResizeWindow("", 1264, 1228)
-
-	if err := driver.Get(baseURL); err != nil {
-		log.Println(err)
-		return false
-	}
-	defer driver.Quit()
-
-	driver = login(userName, password, driver)
-
-	driver.SetImplicitWaitTimeout(2000 * time.Millisecond)
-
-	dismissButton, err := driver.FindElement(selenium.ByXPATH, dismissNotificationXPath)
-	if err != nil {
-		log.Println(err)
-		return false
-	}
-	dismissButton.Click()
-	var nameBox selenium.WebElement
-
-	// some trouble finding the element, so used a recurse
-	loopBackoff := 0
-	for {
-		nameBox, err = driver.FindElement(selenium.ByXPATH, fmt.Sprintf(namedBoxXpath, fullName))
-		if err != nil {
-			log.Println(err)
-			break
-		}
-		t, err := nameBox.Text()
-		checkError(err)
-		if t != "" {
-			break
-		}
-		if loopBackoff > 20 {
-			log.Println("CRASH LOOP, BACKOFF -- orderTotalText")
-			return false
-		}
-		time.Sleep(2000 * time.Millisecond)
-		log.Printf("loopBackoff at %d\n", loopBackoff)
-		loopBackoff++
-	}
-	err = nameBox.Click()
-	if checkError(err) {
-		return false
-	}
-
-	if err := driver.Get(actualURL); err != nil {
-		return false
-	}
-
-	time.Sleep(1000 * time.Millisecond)
-	var dowDiv selenium.WebElement
-	for {
-		dowDiv, err = driver.FindElement(selenium.ByXPATH, fmt.Sprintf(dayOfWeekXpath, weekday))
-		if err == nil {
-			log.Println("found DOW button")
-			break
-		}
-		if loopBackoff > 20 {
-			log.Println("CRASH LOOP, BACKOFF -- orderTotalText")
-			return false
-		}
-		time.Sleep(2000 * time.Millisecond)
-		log.Printf("loopBackoff at %d\n", loopBackoff)
-		loopBackoff++
-	}
-
-	dowDiv.Click()
-
-	var classTimeBox selenium.WebElement
-	loopBackoff = 0
-	for {
-		classTimeBox, err = driver.FindElement(selenium.ByXPATH, fmt.Sprintf(timeOfDayXpath, classTime))
-		cText, err := classTimeBox.Text()
-		if cText != "" || err == nil {
-			break
-		}
-
-		if loopBackoff > 20 {
-			log.Println("CRASH LOOP, BACKOFF -- orderTotalText")
-			return false
-		}
-		time.Sleep(2000 * time.Millisecond)
-		log.Printf("loopBackoff at %d\n", loopBackoff)
-		loopBackoff++
-	}
-
-	bookNowButton, err := driver.FindElement(selenium.ByXPATH, fmt.Sprintf(bookNowXpath, classTime))
-	if checkError(err) {
-		return false
-	}
-	bookText, _ := bookNowButton.Text()
-	log.Println(bookText)
-	bookNowButton.Click()
-
-	time.Sleep(2000 * time.Millisecond)
-	loopBackoff = 0
-	for {
-		orderAmt, err := driver.FindElement(selenium.ByXPATH, orderTotalXpath)
-		if err == nil {
-			orderTotalText, err := orderAmt.Text()
-			log.Println(orderTotalText)
-
-			if orderTotalText != "" || err == nil {
-				log.Println(orderTotalText)
-				break
-			}
-		}
-		if loopBackoff > 20 {
-			log.Println("CRASH LOOP, BACKOFF -- orderTotalText")
-			return false
-		}
-		time.Sleep(2000 * time.Millisecond)
-		log.Printf("loopBackoff at %d\n", loopBackoff)
-		loopBackoff++
-	}
-
-	// driverSnapshot(driver, "buy")
-	loopBackoff = 0
-	for {
-		time.Sleep(2000 * time.Millisecond)
-		buyButton, err := driver.FindElement(selenium.ByXPATH, buyXpath)
-		if err == nil {
-			buyButton.Click()
-			break
-		}
-		if loopBackoff > 20 {
-			log.Println("CRASH LOOP, BACKOFF -- orderTotalText")
-			return false
-		}
-		time.Sleep(2000 * time.Millisecond)
-		log.Printf("loopBackoff at %d\n", loopBackoff)
-		loopBackoff++
-	}
-
-	// Confirm a successful sign up
-	// driverSnapshot(driver, "")
-	loopBackoff = 0
-	for {
-		confirmationSpan, err := driver.FindElement(selenium.ByXPATH, orderConfimationXpath)
-		if err == nil {
-			confirmationSpanText, err := confirmationSpan.Text()
-
-			if confirmationSpanText != "" || err == nil {
-				log.Println(confirmationSpanText)
-				break
-			}
-		}
-		if loopBackoff > 20 {
-			log.Println("CRASH LOOP, BACKOFF -- orderTotalText")
-			return false
-		}
-		time.Sleep(2000 * time.Millisecond)
-		log.Printf("loopBackoff at %d\n", loopBackoff)
-		loopBackoff++
-	}
-
-	// driverSnapshot(driver, "")
-	return true
-}
-
 func parseDate(dt, weekday string) (string, string, error) {
 	parsedTime, err := time.Parse("01/02/2006", dt)
-	checkError(err)
+	if err != nil {
+		panic(err)
+	}
 	day := fmt.Sprintf("%d", parsedTime.Day())
 	return day, shortDOW(weekday), err
 }
@@ -821,54 +608,4 @@ func shortDOW(day string) string {
 		short = "err"
 	}
 	return short
-}
-
-// login function takes the username and password and signs into
-// Mindbody.io
-func login(username, password string, wd selenium.WebDriver) selenium.WebDriver {
-
-	loginBtn, err := wd.FindElement("xpath", loginXpath)
-	checkError(err)
-	loginBtn.Click()
-
-	emailInput, err := wd.FindElement("xpath", emailInputXpath)
-	checkError(err)
-	emailInput.SendKeys(username)
-
-	passwordInput, err := wd.FindElement("xpath", passwordInputXpath)
-	checkError(err)
-	passwordInput.SendKeys(password)
-
-	loginSubmitBtn, err := wd.FindElement("xpath", loginSubmitXpath)
-	checkError(err)
-
-	err = loginSubmitBtn.Click()
-	checkError(err)
-	return wd
-}
-
-func checkError(err error) bool {
-	if err != nil {
-		log.Println("#######")
-		log.Println(err)
-		log.Println("#######")
-		log.Println("Error: \n", err)
-		return true
-	}
-	return false
-}
-
-func driverSnapshot(webdriver selenium.WebDriver, fileName string) bool {
-	if fileName == "" {
-		fileName = "sc"
-	}
-	imgBytes, err := webdriver.Screenshot()
-
-	checkError(err)
-
-	err = ioutil.WriteFile(fileName, imgBytes, 0777)
-	if err != nil {
-		return false
-	}
-	return true
 }
