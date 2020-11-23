@@ -14,7 +14,7 @@
         4: "Thursday",
         5: "Friday",
         6: "Saturday",
-        7: "Sunday",
+        0: "Sunday",
     };
     let timeNow = `${n.toLocaleDateString()} ${n.toLocaleTimeString()}`;
     var myfunc = setInterval(function () {
